@@ -20,7 +20,6 @@ from contextlib import contextmanager
 import pyqtgraph as pg
 import mne
 from explorepy.tools import HeartRateEstimator
-from modules.workers import Worker
 from modules.workers import Thread
 import explorepy._exceptions as xpy_ex
 
@@ -38,8 +37,15 @@ class AppFunctions(MainWindow):
         '''
 
         # value number of channels:
+        # combo_nchan = self.ui.n_chan
+        # model_nchan = combo_nchan.model()
+        # for n in Settings.N_CHAN_LIST:
+        #     item = QStandardItem(str(n))
+        #     item.setForeground(QColor('red'))
+        #     model_nchan.appendRow(item)
         self.ui.n_chan.addItems(Settings.N_CHAN_LIST)
         self.ui.n_chan.setCurrentText("8")
+
 
         # value_signal_type
         self.ui.value_signal.addItems(Settings.MODE_LIST)
@@ -582,22 +588,24 @@ class AppFunctions(MainWindow):
         data = {ch: ["", AppFunctions._impedance_stylesheet_wet(self, "")] for ch in chan_list}
 
         def callback(packet):
-            packet_imp = stream_processor.imp_calculator.measure_imp(packet=packet)
 
-            imp_values = packet_imp.get_impedances()
+            imp_values = packet.get_impedances()
+            # print(imp_values)
+            mode = "dry" if self.ui.imp_mode.currentText() == "Dry electrodes" else "wet"
             for chan, value in zip(chan_list, imp_values):
                 # print(chan, value)
                 # value = value/2
                 # print(value)
-                if value < 5:
-                    str_value = "<5"
+                if value < 5 and mode == "wet":
+                    str_value = "<5 K\u03A9"
+                # elif value < 100 and mode == "dry"
                 elif value > 500:
-                    str_value = ">500"
+                    str_value = "Open"
                 else:
-                    str_value = str(round(value, 0))
+                    str_value = str(int(round(value, 0))) + " K\u03A9"
                 # str_value = "<5" if value < 5 else str(round(value, 0))
-                str_value += " K\u03A9"
-                if self.ui.imp_mode.currentText() == "Dry electrodes":
+                # str_value += " K\u03A9"
+                if mode == "dry":
                     ch_stylesheet = AppFunctions._impedance_stylesheet_dry(self, value=value)
                 else:
                     ch_stylesheet = AppFunctions._impedance_stylesheet_wet(self, value=value)
@@ -652,23 +660,23 @@ class AppFunctions(MainWindow):
     # ////////////////////////////////////////
     # ///// START INTEGRATION PAGE FUNCTIONS/////
 
-    def push_lsl_worker(self, progress_callback):
-        # TODO theres an error in explrorepy
-        # duration = self.ui.duration_push_lsl.value()
-        # self.explorer.push2lsl(duration=duration)
+    # def push_lsl_worker(self, progress_callback):
+    #     # TODO theres an error in explrorepy
+    #     # duration = self.ui.duration_push_lsl.value()
+    #     # self.explorer.push2lsl(duration=duration)
         
-        if self.is_pushing is False:
-            self.is_pushing = True
-            while self.run:
-                time.sleep(1)
-                from datetime import datetime
-                now = datetime.now()
-                dt_string = now.strftime("%H_%M_%S")
-                print("push_lsl: ", dt_string)
-                progress_callback.emit(dt_string)
-        else:
-            self.is_pushing = False
-            self.run = False
+    #     if self.is_pushing is False:
+    #         self.is_pushing = True
+    #         while self.run:
+    #             time.sleep(1)
+    #             from datetime import datetime
+    #             now = datetime.now()
+    #             dt_string = now.strftime("%H_%M_%S")
+    #             print("push_lsl: ", dt_string)
+    #             progress_callback.emit(dt_string)
+    #     else:
+    #         self.is_pushing = False
+    #         self.run = False
     
 
     def push_lsl(self):
@@ -1300,13 +1308,21 @@ class AppFunctions(MainWindow):
                 frame_name = f"frame_{chan}_color"
                 ch_frame = AppFunctions._get_widget_by_objName(self, frame_name)
                 ch_frame.setStyleSheet(new_stylesheet)
-                QApplication.processEvents()
+                # QApplication.processEvents()
+                # ch_frame.repaint()
 
                 new_value = chan_dict[chan][0]
                 label_name = f"label_{chan}_value"
                 ch_label = AppFunctions._get_widget_by_objName(self, label_name)
                 ch_label.setText(new_value)
                 QApplication.processEvents()
+
+                # ch_label.repaint()
+            
+            self.ui.frame_ch1_color.setStyleSheet(AppFunctions._impedance_stylesheet_wet(self, "NA"))
+            self.ui.label_ch1_value.setText("NA")
+            QApplication.processEvents()
+
         else:
             return
 

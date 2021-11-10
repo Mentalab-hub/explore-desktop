@@ -23,10 +23,14 @@ from modules.stylesheets.stylesheet_centralwidget import CENTRAL_STYLESHEET, MAI
 # from modules.ui_main_window import Ui_MainWindow
 
 # pyside6-uic ui_main_window.ui > ui_main_window.py
-# pyside6-uic dialog_plot_settings.ui > dialog_plot_settings.py
-# pyside6-uic dialog_recording_settings.ui > dialog_recording_settings.py
 
-VERSION_APP = 'v0.17'
+# pyside6-uic dialog_plot_settings_light.ui > dialog_plot_settings.py
+# pyside6-uic dialog_recording_settings_light.ui > dialog_recording_settings.py
+
+# pyside6-uic dialog_plot_settings_dark.ui > dialog_plot_settings.py
+# pyside6-uic dialog_recording_settings_dark.ui > dialog_recording_settings.py
+
+VERSION_APP = 'v0.18'
 
 class MainWindow(QMainWindow):
     signal_exg = Signal(object)
