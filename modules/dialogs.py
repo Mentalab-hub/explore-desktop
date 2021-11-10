@@ -4,6 +4,26 @@ from modules.dialog_recording_settings import Ui_Dialog as Ui_RecordingDialog
 from main import *
 from PySide6.QtWidgets import QDialog
 
+stylesheet_cancel = (
+    "QPushButton{\n"
+    "	color: #FFF;\n"
+    "	background-color: transparent;\n"
+    "	border: 2px solid #FFF;\n"
+    "	padding: 5px;\n"
+    "	border-radius: 5px;\n"
+
+    "}\n"
+    "\n"
+    "QPushButton:hover{\n"
+    "	background-color: rgb(61, 64, 89);\n"
+    "}\n"
+    "\n"
+    "QPushButton:pressed{\n"
+    "	background-color: rgb(101, 106, 141);\n"
+    "	border:  2px solid rgb(61, 64, 89);\n"
+    "}\n"
+    ""
+)
 
 class PlotDialog(QDialog):
     def __init__(self, sr, current_filters, parent=None):
@@ -13,6 +33,11 @@ class PlotDialog(QDialog):
         self.ui.lbl_warning.hide()
         self.ui.cb_offset.setToolTip("Remove the DC offset of the signal based on the previous signal values")
         self.setWindowTitle("Visualization Settings")
+
+        self.ui.buttonBox.button(QDialogButtonBox.Cancel).setStyleSheet(
+            stylesheet_cancel
+        )
+
 
         self.s_rate = float(sr)
         if current_filters is None:
@@ -71,7 +96,7 @@ class PlotDialog(QDialog):
 
         r_value = "" if self.ui.value_highpass.text() in [None, 'None'] else self.ui.value_highpass.text()
         l_value = "" if self.ui.value_lowpass.text() in [None, 'None'] else self.ui.value_lowpass.text()
-        print(r_value, l_value)
+        # print(r_value, l_value)
 
         r_stylesheet = ""
         l_stylesheet = ""
@@ -162,9 +187,15 @@ class RecordingDialog(QDialog):
         super().__init__(parent)
         self.ui = Ui_RecordingDialog()
         self.ui.setupUi(self)
+        self.setWindowTitle("Recording Settings")
+        self.ui.buttonBox.button(QDialogButtonBox.Cancel).setStyleSheet(
+            stylesheet_cancel
+        )
+
         self.recording_time = self.ui.spinBox.value()
         self.recording_mode = "csv"
         self.recording_path = ""
+
 
         self.ui.btn_browse.clicked.connect(self.save_filename)
         self.ui.spinBox.setMaximum(10000000)
@@ -206,7 +237,10 @@ class RecordingDialog(QDialog):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    dialog = PlotDialog(sr=250)
+    plotting_filters = {'offset': True, 'notch': 50, 'lowpass': 0.5, 'highpass': 30.0}
+
+    dialog = PlotDialog(sr=250, current_filters=plotting_filters)
+    # dialog = RecordingDialog()
     dialog.show()
     sys.exit(app.exec())
 

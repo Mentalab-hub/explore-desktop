@@ -14,7 +14,11 @@
    <string>Dialog</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">QDialog{
+   <string notr="true">QWidget{
+	font: 13pt &quot;DM Sans&quot;;
+}
+
+QDialog{
 	background-color: rgb(28, 30, 42);
 }
 
@@ -42,6 +46,7 @@ QComboBox{
 
 QRadioButton{
 	color: #FFF;
+	background-color: rgb(28, 30, 42);
 }
 
 QSpinBox{
@@ -56,6 +61,8 @@ QPushButton{
 	border: 2px solid rgb(84, 89, 124);
 	padding: 5px;
 	border-radius: 5px;
+	width: 65px;
+	heigth: 20px;
 
 }
 
@@ -70,25 +77,11 @@ QPushButton:pressed{
 </string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
+   <property name="topMargin">
+    <number>25</number>
+   </property>
    <item>
     <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <widget class="QLabel" name="lbl_title_recording_settings">
-       <property name="text">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Recording Settingns&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
        <item>
@@ -156,8 +149,11 @@ QPushButton:pressed{
       <widget class="QLabel" name="label_4">
        <property name="font">
         <font>
-         <pointsize>10</pointsize>
-         <italic>true</italic>
+         <family>DM Sans</family>
+         <pointsize>13</pointsize>
+         <weight>50</weight>
+         <italic>false</italic>
+         <bold>false</bold>
         </font>
        </property>
        <property name="text">

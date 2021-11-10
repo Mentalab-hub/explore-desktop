@@ -14,7 +14,11 @@
    <string>Dialog</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">QDialog{
+   <string notr="true">QWidget{
+	font: 13pt &quot;DM Sans&quot;;
+}
+
+QDialog{
 	background-color: rgb(28, 30, 42);
 }
 
@@ -23,12 +27,14 @@ QLabel{
 }
 
 QCheckBox{
-	color: #FFF
+	color:#FFF;
+	border: none;
+	background-color: rgb(28, 30, 42);
 }
 
 QLineEdit{
 	color: #FFF;
-	background-color: transparent;
+	background-color: rgb(28, 30, 42);
 	/*background-color: rgb(50, 53, 74);
 	border: 1px solid rgb(84, 89, 124);*/
 	border: 1px solid #FFF;
@@ -37,34 +43,62 @@ QLineEdit{
 QComboBox{
 	color: #FFF;
 	border: 1px solid #FFF;
+	background-color: rgb(28, 30, 42);
+}
+
+QComboBox QAbstractItemView{
+	color: #FFF;
+	background-color: rgb(28, 30, 42);
+}
+
+QFrame#frame{
+	border: none;
+}
+
+QPushButton{
+	color: #FFF;
+	background-color: rgb(84, 89, 124);
+	border: 2px solid rgb(84, 89, 124);
+	padding: 5px;
+	border-radius: 5px;
+	width: 65px;
+	heigth: 20px;
+
+}
+
+QPushButton:hover{
+	background-color: rgb(61, 64, 89);
+}
+
+QPushButton:pressed{
+	background-color: rgb(101, 106, 141);
+	border:  2px solid rgb(61, 64, 89);
+}
+/*
+QPushButton{
+	color: #FFF;
 	background-color: transparent;
-}</string>
+	border: 2px solid #FFF;
+	padding: 5px;
+	border-radius: 5px;
+	width: 65px;
+	heigth: 20px;
+}
+
+QPushButton:hover{
+	background-color: rgb(61, 64, 89);
+}
+
+QPushButton:pressed{
+	background-color: rgb(101, 106, 141);
+	border:  2px solid rgb(61, 64, 89);
+}*/
+</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
-   <item>
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Visualization Settings&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QFrame" name="frame">
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-    </widget>
-   </item>
+   <property name="topMargin">
+    <number>25</number>
+   </property>
    <item>
     <widget class="QCheckBox" name="cb_offset">
      <property name="cursor">
@@ -151,8 +185,11 @@ QComboBox{
     <widget class="QLabel" name="lbl_warning">
      <property name="font">
       <font>
-       <pointsize>10</pointsize>
-       <italic>true</italic>
+       <family>DM Sans</family>
+       <pointsize>13</pointsize>
+       <weight>50</weight>
+       <italic>false</italic>
+       <bold>false</bold>
       </font>
      </property>
      <property name="styleSheet">
