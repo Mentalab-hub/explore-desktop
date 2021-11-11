@@ -3,18 +3,26 @@
 ################################################################################
 ## Form generated from reading UI file 'ui_main_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.1.0
+## Created by: Qt User Interface Compiler version 6.2.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
+    QHBoxLayout, QLabel, QLayout, QLineEdit,
+    QListWidget, QListWidgetItem, QMainWindow, QPushButton,
+    QSizePolicy, QSpacerItem, QSpinBox, QSplitter,
+    QStackedWidget, QTabWidget, QVBoxLayout, QWidget)
 
-from pyqtgraph import PlotWidget
-from pyqtgraph import GraphicsLayoutWidget
-
+from pyqtgraph import (GraphicsLayoutWidget, PlotWidget)
 import app_resources_rc
 import app_resources_rc
 import app_resources_rc
@@ -52,6 +60,11 @@ class Ui_MainWindow(object):
 "	/*font: 13pt \"\"*/\n"
 "}\n"
 "\n"
+"QLabel:disabled{\n"
+"	color: rgb(128, 128, 128);\n"
+"}\n"
+"\n"
+"\n"
 "QPushButton{\n"
 "	color: #FFF;\n"
 "	background-color: rgb(84, 89, 124);\n"
@@ -72,7 +85,10 @@ class Ui_MainWindow(object):
 "}\n"
 "\n"
 "QCheckBox{\n"
-"	color: #fff;\n"
+"	color: #fff;	\n"
+"	background-color: transparent;\n"
+"	border-color: #fff;	\n"
+"\n"
 "}\n"
 "\n"
 "QToolTip{\n"
@@ -83,22 +99,34 @@ class Ui_MainWindow(object):
 "\n"
 "QComboBox{\n"
 "	color: #FFF;\n"
-"	border: 1px solid #FFF\n"
+"	border: 1px solid #FFF;\n"
 "}\n"
 "\n"
 "QComboBox QAbstractItemView{\n"
 "	color: #FFF;\n"
 "}\n"
 "\n"
+"QSp"
+                        "inBox{\n"
+"	color: #FFF;\n"
+"	background-color: transparent;\n"
+"	border-color: #FFF;\n"
+"} \n"
+"\n"
+"QSpinBox:disabled{\n"
+"	color: rgb(128, 128, 128);\n"
+"	background-color: transparent;\n"
+"	border-color: rgb(128, 128, 128);\n"
+"} \n"
+"\n"
 "#centralwidget{\n"
-"	background-color: r#2F4858;\n"
+"	background-color: #2F4858;\n"
 "}\n"
 "\n"
 "/*HEADER*/\n"
 "#main_header{\n"
 "	background-color: rgb(27, 29, 39);\n"
-"	border-bottom: 2px solid rgb(95, 197, 2"
-                        "01);\n"
+"	border-bottom: 2px solid rgb(95, 197, 201);\n"
 "}\n"
 "\n"
 "#main_header .QFrame{\n"
@@ -131,7 +159,8 @@ class Ui_MainWindow(object):
 "	border:none;\n"
 "}\n"
 "\n"
-"#btns_left_menu{\n"
+"#btns"
+                        "_left_menu{\n"
 "	border:none;\n"
 "}\n"
 "\n"
@@ -148,8 +177,7 @@ class Ui_MainWindow(object):
 "\n"
 "#left_side_menu .QPushButton:hover {\n"
 "	background-color: rgb(61, 64, 89);\n"
-"	bord"
-                        "er-left: 20px solid rgb(61, 64, 89);\n"
+"	border-left: 20px solid rgb(61, 64, 89);\n"
 "\n"
 "}\n"
 "#left_side_menu .QPushButton:pressed {\n"
@@ -175,7 +203,8 @@ class Ui_MainWindow(object):
 "}\n"
 "\n"
 "#btn_settings{\n"
-"	background-image: url(:/icons/icons/cil-settings.png);\n"
+"	back"
+                        "ground-image: url(:/icons/icons/cil-settings.png);\n"
 "}\n"
 "\n"
 "#btn_left_menu_toggle{\n"
@@ -194,8 +223,7 @@ class Ui_MainWindow(object):
 "	border-bottom: 1px solid #FFF;\n"
 "	border-top: none;\n"
 "	border-left: none;\n"
-"	border-r"
-                        "ight: none;\n"
+"	border-right: none;\n"
 "}\n"
 "\n"
 "QLabel#home_title{\n"
@@ -227,7 +255,8 @@ class Ui_MainWindow(object):
 "QLabel#settings_title{\n"
 "	color: #FFF;\n"
 "	border:none;\n"
-"	font: 22pt \"DM Sans\";\n"
+"	font: 22pt"
+                        " \"DM Sans\";\n"
 "}\n"
 "\n"
 "QFrame#frame_settings_title{\n"
@@ -249,8 +278,7 @@ class Ui_MainWindow(object):
 "{\n"
 "    background: transparent;\n"
 "    color: white;\n"
-"	border: 1px solid rgb(228, 227, "
-                        "229);\n"
+"	border: 1px solid rgb(228, 227, 229);\n"
 "	/*margin-left: 2;\n"
 "	margin-right: 2;*/\n"
 "	width: 100px;\n"
@@ -581,17 +609,24 @@ class Ui_MainWindow(object):
 "	border:  2px solid rgb(61, 64, 89);\n"
 "}\n"
 "\n"
-"QLabel{\n"
-"	color: #fff;\n"
-"}")
+"QCheckBox{\n"
+"	color: #fff;	\n"
+# "	background-color: transparent;\n"
+"\n"
+"}"
+# "\n"
+# "QCheckBox::indicator{\n"
+# "	border-color: #fff;	\n"
+# # "	background-color: transparent;\n"
+# "\n"
+# "}"
+)
         self.frame_integration.setFrameShape(QFrame.StyledPanel)
         self.frame_integration.setFrameShadow(QFrame.Raised)
         self.verticalLayout_36 = QVBoxLayout(self.frame_integration)
         self.verticalLayout_36.setObjectName(u"verticalLayout_36")
         self.verticalLayout_3 = QVBoxLayout()
-        self.verticalLayout_3.setSpacing(15)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.verticalLayout_3.setSizeConstraint(QLayout.SetFixedSize)
         self.label_2 = QLabel(self.frame_integration)
         self.label_2.setObjectName(u"label_2")
         self.label_2.setMaximumSize(QSize(16777215, 30))
@@ -616,6 +651,50 @@ class Ui_MainWindow(object):
         self.label_11.setWordWrap(True)
 
         self.verticalLayout_3.addWidget(self.label_11)
+
+        self.checkBox = QCheckBox(self.frame_integration)
+        self.checkBox.setObjectName(u"checkBox")
+
+        self.verticalLayout_3.addWidget(self.checkBox)
+
+        self.horizontalLayout_13 = QHBoxLayout()
+        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
+        self.label_13 = QLabel(self.frame_integration)
+        self.label_13.setObjectName(u"label_13")
+        self.label_13.setEnabled(False)
+
+        self.horizontalLayout_13.addWidget(self.label_13)
+
+        self.spinBox = QSpinBox(self.frame_integration)
+        self.spinBox.setObjectName(u"spinBox")
+        self.spinBox.setEnabled(False)
+        self.spinBox.setMaximumSize(QSize(150, 16777215))
+
+        self.horizontalLayout_13.addWidget(self.spinBox)
+
+        self.empty_frame_4 = QFrame(self.frame_integration)
+        self.empty_frame_4.setObjectName(u"empty_frame_4")
+        self.empty_frame_4.setFrameShape(QFrame.StyledPanel)
+        self.empty_frame_4.setFrameShadow(QFrame.Raised)
+
+        self.horizontalLayout_13.addWidget(self.empty_frame_4)
+
+        self.empty_frame_3 = QFrame(self.frame_integration)
+        self.empty_frame_3.setObjectName(u"empty_frame_3")
+        self.empty_frame_3.setFrameShape(QFrame.StyledPanel)
+        self.empty_frame_3.setFrameShadow(QFrame.Raised)
+
+        self.horizontalLayout_13.addWidget(self.empty_frame_3)
+
+        self.empty_frame_2 = QFrame(self.frame_integration)
+        self.empty_frame_2.setObjectName(u"empty_frame_2")
+        self.empty_frame_2.setFrameShape(QFrame.StyledPanel)
+        self.empty_frame_2.setFrameShadow(QFrame.Raised)
+
+        self.horizontalLayout_13.addWidget(self.empty_frame_2)
+
+
+        self.verticalLayout_3.addLayout(self.horizontalLayout_13)
 
         self.btn_push_lsl = QPushButton(self.frame_integration)
         self.btn_push_lsl.setObjectName(u"btn_push_lsl")
@@ -699,7 +778,8 @@ class Ui_MainWindow(object):
 "	border: 2px solid rgb(84, 89, 124);\n"
 "	padding: 5px;\n"
 "	border-radius: 5px;\n"
-"       font: 11pt;\n"
+"	font: 11pt;\n"
+"\n"
 "}\n"
 "\n"
 "QPushButton:hover{\n"
@@ -1150,19 +1230,18 @@ class Ui_MainWindow(object):
 "	border: 1px solid #FFF;\n"
 "	color: #FFF;\n"
 "}\n"
-"\n"
 "QComboBox::drop-down{\n"
 "	color: #FFF;\n"
 "}\n"
-"\n"
 "QComboBox QAbstractItemView{\n"
 "	color: #FFF;\n"
 "}\n"
-"\n"
 "QComboBox QListView{\n"
 "	color: #FFF;\n"
 "}\n"
-"\n"
+"QListView{\n"
+"	color:#FFF;\n"
+"}\n"
 "QPushButton{\n"
 "	border-radius: 1px;\n"
 "	border: 1px solid #FFFFFF;\n"
@@ -1185,15 +1264,15 @@ class Ui_MainWindow(object):
 "	background-position: left center;\n"
 "    	background-repeat: no-repeat;\n"
 "	border: none;\n"
-"	border-left: 20px solid transparent;\n"
+"	bor"
+                        "der-left: 20px solid transparent;\n"
 "	text-align: left;\n"
 "	padding-left: 44px;\n"
 "	color: rgb(189, 189, 189);\n"
 "}\n"
 "QPushButton:hover{\n"
 "	background-color: rgb(61, 64, 89);\n"
-"	b"
-                        "order-left: 20px solid rgb(61, 64, 89);*/\n"
+"	border-left: 20px solid rgb(61, 64, 89);*/\n"
 "")
         self.verticalLayout_21 = QVBoxLayout(self.page_plotsNoWidget)
         self.verticalLayout_21.setObjectName(u"verticalLayout_21")
@@ -1455,17 +1534,17 @@ class Ui_MainWindow(object):
 "	border: 1px solid #FFF;\n"
 "	color: #FFF;\n"
 "}\n"
-"\n"
 "QComboBox::drop-down{\n"
 "	color: #FFF;\n"
 "}\n"
-"\n"
 "QComboBox QAbstractItemView{\n"
 "	color: #FFF;\n"
 "}\n"
-"\n"
 "QComboBox QListView{\n"
 "	color: #FFF;\n"
+"}\n"
+"QListView{\n"
+"	color:#FFF;\n"
 "}\n"
 "\n"
 "QPushButton{\n"
@@ -1488,7 +1567,8 @@ class Ui_MainWindow(object):
 "	border: none;\n"
 "	border-left: 20px solid transparent;\n"
 "	text-align: left;\n"
-"	padding-left: 44px;\n"
+"	padding-left: 44px"
+                        ";\n"
 "	color: rgb(189, 189, 189);\n"
 "}\n"
 "QPushButton:hover{\n"
@@ -2772,7 +2852,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.stackedWidget.setCurrentIndex(2)
+        self.stackedWidget.setCurrentIndex(1)
         self.tabWidget.setCurrentIndex(0)
         self.tabWidget_rec.setCurrentIndex(0)
 
@@ -2804,6 +2884,8 @@ class Ui_MainWindow(object):
         self.integration_title.setText(QCoreApplication.translate("MainWindow", u"INTEGRATION", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" font-weight:600;\">Push to LSL</span></p></body></html>", None))
         self.label_11.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Stream data from other software such as OpenVibe or other programming languages. </p><p>It will create three LSL streams for ExG, Orientation and markers. </p></body></html>", None))
+        self.checkBox.setText(QCoreApplication.translate("MainWindow", u"Set duration (the default stream duration is 3600 seconds.)", None))
+        self.label_13.setText(QCoreApplication.translate("MainWindow", u"Duration (s):", None))
         self.btn_push_lsl.setText(QCoreApplication.translate("MainWindow", u"Push", None))
         self.settings_log.setText("")
         self.settings_title.setText(QCoreApplication.translate("MainWindow", u"SETTINGS", None))

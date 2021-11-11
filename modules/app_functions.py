@@ -410,13 +410,10 @@ class AppFunctions(MainWindow):
         Read selected checkboxes and set the channel mask of the device
         """
         # TEST FILTERS
-        # if self.plotting_filters is not None:
-        #     self._baseline_corrector["baseline"] = None
-        #     print(f"{self.plotting_filters=}")
-        #     print(f"Before: {self.explorer.stream_processor.filters=}")
-        #     self.explorer.stream_processor.filters = []
-        #     print(f"After: {self.explorer.stream_processor.filters=}")
-
+        if self.plotting_filters is not None:
+            self._baseline_corrector["baseline"] = None
+            self.explorer.stream_processor.remove_filter()
+            # self.explorer.stream_processor.remove_filters()
 
         active_chan = []
 
@@ -458,7 +455,7 @@ class AppFunctions(MainWindow):
         Apply changes in device settings
         """
         
-        AppFunctions._disconnect_signals(self)
+        # AppFunctions._disconnect_signals(self)
         print('disconnected signal')
 
         stream_processor = self.explorer.stream_processor
@@ -492,9 +489,8 @@ class AppFunctions(MainWindow):
         # QMessageBox.information(self, title, msg)
         AppFunctions._display_msg(self, msg_text=msg, type="info")
 
-
-        AppFunctions._connect_signals(self)
-        print("connected signal")
+        # AppFunctions._connect_signals(self)
+        # print("connected signal")
 
         AppFunctions.init_plots(self)
         # AppFunctions.emit_exg(self)
@@ -596,7 +592,7 @@ class AppFunctions(MainWindow):
                 # print(chan, value)
                 # value = value/2
                 # print(value)
-                if value < 5 and mode == "wet":
+                if value < 5:
                     str_value = "<5 K\u03A9"
                 # elif value < 100 and mode == "dry"
                 elif value > 500:
@@ -680,8 +676,14 @@ class AppFunctions(MainWindow):
     
 
     def push_lsl(self):
+        if self.is_connected is False:
+            QMessageBox.critical(self, "Error", "Please connect an Explore device first")
+            return
+
         if self.th is None:
-            self.th = Thread(explore=self.explorer, duration=None)
+            spinbox_val = self.ui.spinBox.value()
+            duration = None if spinbox_val == 0 else spinbox_val
+            self.th = Thread(explore=self.explorer, duration=duration)
         
         if self.is_pushing is False:
             self.is_pushing = True
@@ -690,8 +692,19 @@ class AppFunctions(MainWindow):
         else:
             self.is_pushing = False
             self.th.stop()
+            self.th.quit()
+            # self.th.wait()
             self.th = None
             self.ui.btn_push_lsl.setText("Push")
+
+    def enable_lsl_duration(self):
+        enable = self.ui.checkBox.isChecked()
+        # if self.ui.cb_lsl_duration.isChecked():
+        self.ui.label_13.setEnabled(enable)
+        # self.ui.label_lsl_duration.setEnabled(enable)
+        self.ui.spinBox.setEnabled(enable)
+        # self.ui.lsl_duration_.setEnabled(enable)
+
 
     # ///// END INTEGRATION PAGE FUNCTIONS/////
 
@@ -726,7 +739,8 @@ class AppFunctions(MainWindow):
                 time_vector = time_vector[::int(exg_fs / Settings.EXG_VIS_SRATE)]
 
             # Baseline correction
-            if self.plotting_filters["offset"]: # if True: # if testing
+            if self.plotting_filters is not None and self.plotting_filters["offset"]: 
+            # if not True: # if testing
                 samples_avg = exg.mean(axis=1)
                 if self._baseline_corrector["baseline"] is None:
                     self._baseline_corrector["baseline"] = samples_avg
@@ -747,9 +761,9 @@ class AppFunctions(MainWindow):
                 self._baseline_corrector["baseline"] = None
 
             # Update ExG unit
+            # TEST FILTERS
             try:
                 exg = self.offsets + exg / self.y_unit
-            # exg /= self.y_unit
 
                 data = dict(zip(chan_list, exg))
                 data['t'] = time_vector
@@ -819,10 +833,10 @@ class AppFunctions(MainWindow):
     # ########### Start Init Plot Functions ################
     def init_plots(self):
         if self.ui.plot_orn.getItem(0, 0) != None:
-
             self.ui.plot_exg.clear()
             self.ui.plot_fft.clear()
             self.ui.plot_orn.clear()
+            self.line = None
             print("cleared plots")
 
         AppFunctions.init_plot_exg(self)
@@ -1362,9 +1376,15 @@ class AppFunctions(MainWindow):
 
     def _apply_filters(self):
         stream_processor = self.explorer.stream_processor
-        notch_freq = self.plotting_filters["notch"]
-        high_freq = self.plotting_filters["highpass"]
-        low_freq = self.plotting_filters["lowpass"]
+
+        if self.plotting_filters is None:
+            notch_freq = None
+            high_freq = None
+            low_freq = None
+        else:
+            notch_freq = self.plotting_filters["notch"]
+            high_freq = self.plotting_filters["highpass"]
+            low_freq = self.plotting_filters["lowpass"]
 
         if notch_freq is not None:
             stream_processor.add_filter(cutoff_freq=notch_freq, filter_type='notch')

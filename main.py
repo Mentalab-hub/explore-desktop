@@ -66,7 +66,7 @@ class MainWindow(QMainWindow):
         # self.ui.duration_push_lsl.hide()
         # self.ui.frame_6.hide()
         self.ui.frame_impedance_widgets_16.hide()
-        self.ui.imp_meas_info.setHidden(True)
+        # self.ui.imp_meas_info.setHidden(True)
         self.ui.label_3.setHidden(self.file_names is None)
         self.ui.label_7.setHidden(self.file_names is None)
 
@@ -183,7 +183,8 @@ class MainWindow(QMainWindow):
         self.ui.n_chan.currentTextChanged.connect(lambda: AppFunctions._on_n_chan_change(self))
 
         # IMPEDANCE PAGE
-        self.ui.imp_meas_info.setToolTip("Sum of impedances on REF and individual channels divided by 2")
+        # self.ui.imp_meas_info.setToolTip("Sum of impedances on REF and individual channels divided by 2")
+        self.ui.imp_meas_info.setToolTip("Sum of impedances on REF and individual channels")
         self.ui.btn_imp_meas.clicked.connect(lambda: AppFunctions.emit_imp(self))
         self.signal_imp.connect(lambda data: AppFunctions._update_impedance(self, data))
         # self.ui.label_6.linkActivated.connect(lambda: AppFunctions.disable_imp(self))
@@ -244,6 +245,7 @@ class MainWindow(QMainWindow):
         self.ui.btn_stream_rec.clicked.connect(lambda: self.start_recorded_plots())
 
         # INTEGRATION PAGE
+        self.ui.checkBox.stateChanged.connect(lambda: AppFunctions.enable_lsl_duration(self))
         self.ui.btn_push_lsl.clicked.connect(lambda: AppFunctions.push_lsl(self))
 
         # /////////////////////////////// START TESTING ///////////////////////
@@ -450,7 +452,6 @@ class MainWindow(QMainWindow):
             
             elif self.file_names is None:
                 self.ui.stackedWidget.setCurrentWidget(self.ui.page_plotsNoWidget)
-
                 if self.plotting_filters is None:
                     self.plot_filters()
 
@@ -465,10 +466,10 @@ class MainWindow(QMainWindow):
                     self.update_heart_rate()
                     self.is_streaming = True
 
-                for w in self.ui.frame_cb_channels.findChildren(QCheckBox):
-                    w.setEnabled(False)
-                    w.setToolTip("Changing channels during visualization is not allowed")
-                    w.setStyleSheet("color: gray")
+                # for w in self.ui.frame_cb_channels.findChildren(QCheckBox):
+                #     w.setEnabled(False)
+                #     w.setToolTip("Changing channels during visualization is not allowed")
+                #     w.setStyleSheet("color: gray")
 
             else:
                 self.ui.stackedWidget.setCurrentWidget(self.ui.page_plotsRecorded)

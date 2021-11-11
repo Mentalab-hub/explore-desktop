@@ -96,5 +96,6 @@ class Thread(QThread):
 
     def stop(self):
         self._go = False
-        print("Stoped")
+        self.explore.stop_lsl()
+        print("Stopped")
 
