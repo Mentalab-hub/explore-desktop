@@ -660,9 +660,10 @@ class AppFunctions(MainWindow):
             QMessageBox.critical(self, "Error", "Please connect an Explore device first")
             return
 
-        spinbox_val = self.ui.spinBox.value()
-        duration = None if spinbox_val == 0 else spinbox_val
+        # spinbox_val = self.ui.spinBox.value()
+        # duration = None if spinbox_val == 0 else spinbox_val
         
+            
         if self.is_pushing is False:
             self.is_pushing = True
             self.explorer.push2lsl(duration=None, block=False)
