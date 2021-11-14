@@ -73,7 +73,7 @@ class MainWindow(QMainWindow):
         self.plotting_filters = None
         # self.plotting_filters = {'offset': True, 'notch': 50, 'lowpass': 0.5, 'highpass': 30.0}
 
-        self.downsampling = False
+        self.downsampling = True
         self.t_exg_plot = np.array([np.NaN]*2500)
         self.exg_pointer = 0
         self.exg_plot = {}
@@ -245,9 +245,12 @@ class MainWindow(QMainWindow):
         self.ui.btn_stream_rec.clicked.connect(lambda: self.start_recorded_plots())
 
         # INTEGRATION PAGE
+        self.ui.checkBox.hide()
+        self.ui.label_13.setHidden(True)
+        self.ui.spinBox.hide()
         self.ui.checkBox.stateChanged.connect(lambda: AppFunctions.enable_lsl_duration(self))
         self.ui.btn_push_lsl.clicked.connect(lambda: AppFunctions.push_lsl(self))
-
+        # self.check_connection()
         # /////////////////////////////// START TESTING ///////////////////////
         '''self.signal_exg.connect(lambda data: AppFunctions.plot_exg(self, data))
         # self.ui.pushButton_2.clicked.connect(lambda: AppFunctions.emit_exg(self))
@@ -274,6 +277,12 @@ class MainWindow(QMainWindow):
         self.timer_hr.setInterval(2000)
         self.timer_hr.timeout.connect(lambda: AppFunctions._plot_heart_rate(self))
         self.timer_hr.start()
+
+    def check_connection(self):
+        self.timer_con = QTimer(self)
+        self.timer_con.setInterval(2000)
+        self.timer_con.timeout.connect(lambda: print("connected: ", self.explorer.is_connected))
+        self.timer_con.start()
 
     def import_recorded_data(self):
         '''

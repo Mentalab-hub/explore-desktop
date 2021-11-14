@@ -4,6 +4,7 @@ from datetime import timezone
 import time
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor, QIntValidator
+from explorepy import stream_processor
 from explorepy.stream_processor import TOPICS
 from pyqtgraph.Qt import App
 from scipy import signal
@@ -388,12 +389,11 @@ class AppFunctions(MainWindow):
         Change the sampling rate
         """
 
-        AppFunctions._check_filters_new_sr(self)
-
         sr = self.explorer.stream_processor.device_info['sampling_rate']
         str_value = self.ui.value_sampling_rate.currentText()
         value = int(str_value)
         if int(sr) != value:
+            AppFunctions._check_filters_new_sr(self)
             # print(value)
             print(
                 "Old Sampling rate: ",
@@ -404,16 +404,12 @@ class AppFunctions(MainWindow):
                 self.explorer.stream_processor.device_info['sampling_rate'])
         else:
             print("Same sampling rate")
+            return
 
     def change_active_channels(self):
         """
         Read selected checkboxes and set the channel mask of the device
         """
-        # TEST FILTERS
-        if self.plotting_filters is not None:
-            self._baseline_corrector["baseline"] = None
-            self.explorer.stream_processor.remove_filter()
-            # self.explorer.stream_processor.remove_filters()
 
         active_chan = []
 
@@ -426,29 +422,41 @@ class AppFunctions(MainWindow):
         active_chan = [i for i in reversed(active_chan)]
 
         if active_chan_int != self.explorer.stream_processor.device_info['adc_mask']:
+
+            # TEST FILTERS
+            if self.plotting_filters is not None:
+                self._baseline_corrector["baseline"] = None
+                self.explorer.stream_processor.remove_filter()
+                
+                # self.explorer.stream_processor.remove_filters()
+
             mask = "".join(active_chan)
             int_mask = int(mask, 2)
+            
             self.explorer.set_channels(int_mask)
+            self.offsets = np.arange(1, active_chan.count(1) + 1)[:, np.newaxis].astype(float)
 
             n_chan = self.explorer.stream_processor.device_info['adc_mask']
             n_chan = [i for i in reversed(n_chan)]
             
             self.chan_dict = dict(
                     zip([c.lower() for c in Settings.CHAN_LIST], n_chan))
-            
-            # sr = AppFunctions._get_samplingRate(self)
-            # ts = AppFunctions._get_timeScale(self)
-            # points = sr * ts
-            # points = AppFunctions._plot_points(self)
-            # self.exg_plot = {ch: np.array([np.NaN]*points) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
-            
+
+            points = AppFunctions._plot_points(self)
+            self.exg_plot = {ch: np.array([np.NaN]*points) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
+             
             print('changed')
             print(f"{self.explorer.stream_processor.device_info['adc_mask']=}")
             print(f"{self.chan_dict=}")
+
+            self.offsets = np.arange(1, n_chan.count(1) + 1)[:, np.newaxis].astype(float)
+            self._baseline_corrector["baseline"] = None
+            AppFunctions._apply_filters(self)
             AppFunctions.init_imp(self)
 
         else:
             print("Same channel mask")
+            return
 
     def change_settings(self):
         """
@@ -456,18 +464,9 @@ class AppFunctions(MainWindow):
         """
         
         # AppFunctions._disconnect_signals(self)
-        print('disconnected signal')
-
+        # print('disconnected signal')
         stream_processor = self.explorer.stream_processor
-        filters = stream_processor.filters
-        # print(f"{stream_processor.filters=}")
-        # print("\n\n\n")
-        # stream_processor.filters = []
-        # print(f"{stream_processor.filters=}")
-        # print("\n\n\n")
-        # AppFunctions.emit_exg(self, stop=True)
-        # print("\n\n\n")
-
+        
         with AppFunctions._wait_cursor():
             AppFunctions.change_active_channels(self)
             AppFunctions.change_sampling_rate(self)
@@ -478,6 +477,7 @@ class AppFunctions(MainWindow):
             self.exg_plot = {ch: np.array([np.NaN]*points) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
             self.t_exg_plot = np.array([np.NaN]*points)
             pass
+        AppFunctions.init_plots(self)
 
         act_chan = ", ".join([ch for ch in self.chan_dict if self.chan_dict[ch]==1])
         title = "!"
@@ -492,7 +492,6 @@ class AppFunctions(MainWindow):
         # AppFunctions._connect_signals(self)
         # print("connected signal")
 
-        AppFunctions.init_plots(self)
         # AppFunctions.emit_exg(self)
 
     def _on_n_chan_change(self):
@@ -656,45 +655,21 @@ class AppFunctions(MainWindow):
     # ////////////////////////////////////////
     # ///// START INTEGRATION PAGE FUNCTIONS/////
 
-    # def push_lsl_worker(self, progress_callback):
-    #     # TODO theres an error in explrorepy
-    #     # duration = self.ui.duration_push_lsl.value()
-    #     # self.explorer.push2lsl(duration=duration)
-        
-    #     if self.is_pushing is False:
-    #         self.is_pushing = True
-    #         while self.run:
-    #             time.sleep(1)
-    #             from datetime import datetime
-    #             now = datetime.now()
-    #             dt_string = now.strftime("%H_%M_%S")
-    #             print("push_lsl: ", dt_string)
-    #             progress_callback.emit(dt_string)
-    #     else:
-    #         self.is_pushing = False
-    #         self.run = False
-    
-
     def push_lsl(self):
         if self.is_connected is False:
             QMessageBox.critical(self, "Error", "Please connect an Explore device first")
             return
 
-        if self.th is None:
-            spinbox_val = self.ui.spinBox.value()
-            duration = None if spinbox_val == 0 else spinbox_val
-            self.th = Thread(explore=self.explorer, duration=duration)
+        spinbox_val = self.ui.spinBox.value()
+        duration = None if spinbox_val == 0 else spinbox_val
         
         if self.is_pushing is False:
             self.is_pushing = True
-            self.th.start()
+            self.explorer.push2lsl(duration=None, block=False)
             self.ui.btn_push_lsl.setText("Stop")
         else:
             self.is_pushing = False
-            self.th.stop()
-            self.th.quit()
-            # self.th.wait()
-            self.th = None
+            self.explorer.stop_lsl()
             self.ui.btn_push_lsl.setText("Push")
 
     def enable_lsl_duration(self):
@@ -745,22 +720,31 @@ class AppFunctions(MainWindow):
                 if self._baseline_corrector["baseline"] is None:
                     self._baseline_corrector["baseline"] = samples_avg
                 else:
-                    self._baseline_corrector["baseline"] -= (
-                                (self._baseline_corrector["baseline"] - samples_avg) / self._baseline_corrector["MA_length"] *
-                                exg.shape[1])
-                    #TEST FILTERS
-                    # try:
-                    #     self._baseline_corrector["baseline"] -= (
+                    # self._baseline_corrector["baseline"] -= (
                     #             (self._baseline_corrector["baseline"] - samples_avg) / self._baseline_corrector["MA_length"] *
                     #             exg.shape[1])
-                    # except ValueError:
-                    #     self._baseline_corrector["baseline"] = None
-
-                exg -= self._baseline_corrector["baseline"][:, np.newaxis]
+                    # TEST FILTERS
+                    try:
+                        self._baseline_corrector["baseline"] -= (
+                                (self._baseline_corrector["baseline"] - samples_avg) / self._baseline_corrector["MA_length"] *
+                                exg.shape[1])
+                        exg -= self._baseline_corrector["baseline"][:, np.newaxis]
+                        
+                    except ValueError:
+                        self._baseline_corrector["baseline"] = None
+                        print("ValueError line 733")
+                # TEST FITLERS
+                # exg -= self._baseline_corrector["baseline"][:, np.newaxis]
             else:
                 self._baseline_corrector["baseline"] = None
 
             # Update ExG unit
+            
+            # exg = self.offsets + exg / self.y_unit
+
+            # data = dict(zip(chan_list, exg))
+            # data['t'] = time_vector
+            # self.signal_exg.emit(data)
             # TEST FILTERS
             try:
                 exg = self.offsets + exg / self.y_unit
@@ -769,7 +753,7 @@ class AppFunctions(MainWindow):
                 data['t'] = time_vector
                 self.signal_exg.emit(data)
             except Exception as e:
-                print(e)
+                print('emit exg exception', e)
 
         if stop:
             stream_processor.unsubscribe(topic=TOPICS.filtered_ExG, callback=callback)
@@ -778,10 +762,7 @@ class AppFunctions(MainWindow):
 
         AppFunctions._apply_filters(self)
         stream_processor.subscribe(topic=TOPICS.filtered_ExG, callback=callback)
-        
-
-
-    
+         
     def emit_orn(self):
         """"
         Get orientation data
@@ -954,16 +935,23 @@ class AppFunctions(MainWindow):
 
         # if not np.isnan(np.sum(self.t_exg_plot)):
 
-        n_new_points = len(data["t"])
-        # n_new_points = len(data["t"]) + 1
+        n_new_points = len(data["t"]) 
+        # n_new_points = len(data["t"]) + 1 #!!!
         idxs = np.arange(self.exg_pointer, self.exg_pointer+n_new_points)
 
         self.t_exg_plot.put(idxs, data["t"], mode="wrap")  # replace values with new points
         self.last_t = data["t"][-1]
 
         for i, ch in enumerate(self.exg_plot.keys()):
-            d = data[ch]
-            # d = np.concatenate((data[ch], np.array([np.NaN])))
+            # d = data[ch]
+            # TEST FLTERS
+            try:
+                d = data[ch]
+                # d = np.concatenate((data[ch], np.array([np.NaN]))) #!!!
+
+            except KeyError as e:
+                d = np.array([np.NaN for i in range(n_new_points)])
+                print(str(e))
             self.exg_plot[ch].put(idxs, d, mode="wrap")
             # self.exg_plot[ch][self.exg_pointer+n_new_points]=np.NaN
 
@@ -1011,7 +999,7 @@ class AppFunctions(MainWindow):
         # Paint curves
         for curve, ch in zip(self.curves_list, self.active_chan):
             # curve.setData(self.t_exg_plot, self.exg_plot[ch], connect=connection)
-            curve.setData(self.t_exg_plot, self.exg_plot[ch])
+            curve.setData(self.t_exg_plot, self.exg_plot[ch], connect="finite")
 
         # Remove reploted markers
         for idx_t in range(len(self.mrk_replot["t"])):
@@ -1110,7 +1098,7 @@ class AppFunctions(MainWindow):
         exg_data = np.array([self.exg_plot[key][~np.isnan(self.exg_plot[key])] for key in self.exg_plot.keys()])
         # exg_data = np.array([self.exg_plot[key] for key in self.exg_plot.keys()])
 
-        if exg_data.shape[1] < exg_fs * 5:
+        if (len(exg_data.shape) == 1)or (exg_data.shape[1] < exg_fs * 5):
             return
 
         fft_content, freq = AppFunctions.get_fft(exg_data, exg_fs)
