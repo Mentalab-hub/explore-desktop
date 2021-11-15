@@ -426,10 +426,8 @@ class AppFunctions(MainWindow):
             # TEST FILTERS
             if self.plotting_filters is not None:
                 self._baseline_corrector["baseline"] = None
-                self.explorer.stream_processor.remove_filter()
+                self.explorer.stream_processor.remove_filters()
                 
-                # self.explorer.stream_processor.remove_filters()
-
             mask = "".join(active_chan)
             int_mask = int(mask, 2)
             
