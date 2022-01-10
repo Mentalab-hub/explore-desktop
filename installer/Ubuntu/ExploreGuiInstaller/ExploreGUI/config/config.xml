@@ -3,7 +3,7 @@
     <Name>ExploreGUI</Name>
     <Version>0.1.0</Version>
     <Title>setup_ExploreGUI</Title>
-    <Publisher>Mentalab GmBH.</Publisher>
+    <Publisher>Mentalab GmbH.</Publisher>
     <InstallerApplicationIcon>MentalabLogo.png</InstallerApplicationIcon>
     <StartMenuDir>ExploreGUI</StartMenuDir>
     <TargetDir>@HomeDir@/ExploreGUI</TargetDir>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Package>
     <DisplayName>ExploreGUI</DisplayName>
-    <Description>Install ExploreGUI in your computer.</Description>
+    <Description>Install ExploreGUI</Description>
     <Version>0.1.0</Version>
     <ReleaseDate>2022-01-15</ReleaseDate>
     <Licenses>
