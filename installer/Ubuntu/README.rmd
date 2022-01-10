@@ -1,0 +1,25 @@
+# ExploreGUI Installer for Windows
+
+This page provides instructions for creating an installer for Windows 10.
+
+## Dependencies
+- Python 3.8.12 and a virtual environment
+- [PyInstaller](https://github.com/pyinstaller/pyinstaller) with `pip install pyinstaller==4.7` inside a the virtual environment.
+- [InstallBuilder for Qt](https://installbuilder.com/download-installbuilder-for-qt-step-2.html) (version 6.2.0)
+- [Qt Installer Framework] (https://download.qt.io/official_releases/qt-installer-framework/4.2.0/)
+
+## How to
+
+- In a terminal activate the virtual environment and navigate to ExploreGUI folder
+- Install ExploreGUI using `pip install -e .`
+- Run `pyinstaller --onedir --console --icon=mentalab ExploreGUI.spec`
+
+This should create a directory named `ExploreGUI` in the `dist` folder. You can run the `ExploreGUI` file to make sure the software works as intended.
+
+
+1. Install Qt Installer Framework and locate its directory (e.g. home/Qt/QtIFW)
+2. Inside the QtIFW directory, locate the `binarycreator` file and copy its path.
+3. Place all the contents of the `ExploreGUI` directory from the `dist` folder inside the `/installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data` directory
+4. Open the `/installer/Ubuntu/ExploreGuiInstaller/ExploreGUI` folder in the terminal
+5. Run the command  `path_to_binarycreator -c config/config.xml -p packages --verbose  ExploreGUIInstaller.run`
+6. The installable file (`ExploreGUIInstaller.run`) will be located in the `/installer/Ubuntu/ExploreGuiInstaller/ExploreGUI` directory

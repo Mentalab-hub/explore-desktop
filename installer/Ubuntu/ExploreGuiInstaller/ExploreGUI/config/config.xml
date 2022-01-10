@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>ExploreGUI</Name>
+    <Version>0.1.0</Version>
+    <Title>setup_ExploreGUI</Title>
+    <Publisher>Mentalab GmBH.</Publisher>
+    <InstallerApplicationIcon>MentalabLogo.png</InstallerApplicationIcon>
+    <StartMenuDir>ExploreGUI</StartMenuDir>
+    <TargetDir>@HomeDir@/ExploreGUI</TargetDir>
+    <RunProgram>@TargetDir@/ExploreGUI</RunProgram>
+    <RemoveTargetDir>true</RemoveTargetDir>
+</Installer>
