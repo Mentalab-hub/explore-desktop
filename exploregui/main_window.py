@@ -89,7 +89,10 @@ class MainWindow(QMainWindow):
         self.ui.label_7.setHidden(self.file_names is None)
 
         # Hide os bar
-        self.setWindowFlags(Qt.FramelessWindowHint)
+        if sys.platform != 'darwin':
+            self.setWindowFlags(Qt.FramelessWindowHint)
+        else:
+            self.ui.top_right_btns.setHidden(True)
 
         # Add app version to footer
         self.ui.ft_label_version.setText(VERSION_APP)
