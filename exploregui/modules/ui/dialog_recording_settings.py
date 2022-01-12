@@ -19,7 +19,7 @@ class Ui_Dialog(object):
             Dialog.setObjectName(u"Dialog")
         Dialog.resize(400, 300)
         Dialog.setStyleSheet(u"QWidget{\n"
-"	font: 11pt \"DM Sans\";\n"
+"	font: 11pt;\n"
 "}\n"
 "\n"
 "QDialog{\n"
@@ -31,7 +31,7 @@ class Ui_Dialog(object):
 "}\n"
 "\n"
 "QLabe#label_4l{\n"
-"	font: italic 9pt \"DM Sans\";\n"
+"	font: italic 9pt;\n"
 "}\n"
 "\n"
 "QCheckBox{\n"
@@ -148,7 +148,6 @@ class Ui_Dialog(object):
         self.label_4 = QLabel(Dialog)
         self.label_4.setObjectName(u"label_4")
         font = QFont()
-        font.setFamilies([u"DM Sans"])
         font.setPointSize(11)
         font.setBold(False)
         font.setItalic(False)

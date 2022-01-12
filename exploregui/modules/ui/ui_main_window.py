@@ -379,7 +379,6 @@ class Ui_MainWindow(object):
         self.home_title.setObjectName(u"home_title")
         self.home_title.setMinimumSize(QSize(0, 0))
         font = QFont()
-        font.setFamilies([u"DM Sans"])
         font.setPointSize(22)
         font.setBold(False)
         font.setItalic(False)
@@ -577,7 +576,6 @@ class Ui_MainWindow(object):
         self.label_2.setObjectName(u"label_2")
         self.label_2.setMaximumSize(QSize(16777215, 30))
         font1 = QFont()
-        font1.setFamilies([u"DM Sans"])
         font1.setPointSize(13)
         font1.setBold(False)
         font1.setItalic(False)
@@ -589,7 +587,6 @@ class Ui_MainWindow(object):
         self.label_11 = QLabel(self.frame_integration)
         self.label_11.setObjectName(u"label_11")
         font2 = QFont()
-        font2.setFamilies([u"DM Sans"])
         font2.setPointSize(13)
         font2.setBold(False)
         font2.setItalic(False)
@@ -1037,7 +1034,6 @@ class Ui_MainWindow(object):
         self.value_event_code.setObjectName(u"value_event_code")
         self.value_event_code.setMaximumSize(QSize(85, 30))
         font3 = QFont()
-        font3.setFamilies([u"DM Sans"])
         font3.setPointSize(11)
         font3.setBold(False)
         font3.setItalic(False)
@@ -1341,7 +1337,6 @@ class Ui_MainWindow(object):
         self.label_ch1_value.setMinimumSize(QSize(61, 0))
         self.label_ch1_value.setMaximumSize(QSize(16777215, 30))
         font4 = QFont()
-        font4.setFamilies([u"DM Sans"])
         font4.setPointSize(12)
         font4.setBold(False)
         font4.setItalic(False)
@@ -1383,7 +1378,6 @@ class Ui_MainWindow(object):
         self.label_ch2.setMinimumSize(QSize(61, 0))
         self.label_ch2.setMaximumSize(QSize(16777215, 30))
         font5 = QFont()
-        font5.setFamilies([u"DM Sans"])
         font5.setBold(False)
         font5.setItalic(False)
         self.label_ch2.setFont(font5)
@@ -2175,9 +2169,9 @@ class Ui_MainWindow(object):
         self.label_10.setText(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:'DM Sans'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Segoe UI';\">Press the button on your device to turn it on.</span></p>\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'Segoe UI';\">Scan the paired devices or directly input the name of your device.</span></p></body></html>", None))
+"</style></head><body style=\" font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Press the button on your device to turn it on.</span></p>\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Scan the paired devices or directly input the name of your device.</span></p></body></html>", None))
         self.btn_scan.setText(QCoreApplication.translate("MainWindow", u"Scan", None))
         self.btn_connect.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
         self.label_15.setText(QCoreApplication.translate("MainWindow", u"Device Name: ", None))

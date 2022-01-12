@@ -19,7 +19,7 @@ class Ui_Dialog(object):
             Dialog.setObjectName(u"Dialog")
         Dialog.resize(396, 260)
         Dialog.setStyleSheet(u"QWidget{\n"
-"	font: 11pt \"DM Sans\";\n"
+"	font: 11pt;\n"
 "}\n"
 "\n"
 "QDialog{\n"
@@ -166,7 +166,6 @@ class Ui_Dialog(object):
         self.lbl_warning = QLabel(Dialog)
         self.lbl_warning.setObjectName(u"lbl_warning")
         font = QFont()
-        font.setFamilies([u"DM Sans"])
         font.setPointSize(13)
         font.setBold(False)
         font.setItalic(False)
