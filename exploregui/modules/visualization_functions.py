@@ -15,25 +15,27 @@ from scipy.ndimage.filters import gaussian_filter1d
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-NANS = [False, False]  # exg, orn
+NANS = [False, False]  # exg, orn todo: potentially to create gap between two sets of data - if so, potentially rename
 
 
 class VisualizationFunctions(AppFunctions):
+    #todo: add docstring
     def __init__(self, ui, explorer, signals):
+        # todo: add docstring
         super().__init__(ui, explorer)
         self.signal_exg = signals['exg']
         self.signal_mkr = signals['mkr']
         self.signal_orn = signals['orn']
 
         self._vis_time_offset = None
-        self._baseline_corrector = {'MA_length': 1.5 * Settings.EXG_VIS_SRATE,
-                                    'baseline': 0}
+        self._baseline_corrector = {'MA_length': 1.5 * Settings.EXG_VIS_SRATE,  # TODO: move this 1.5 to settings class
+                                    'baseline': 0}  # TODO: (probably) move baseline parameter to settings class
 
         self.y_unit = Settings.DEFAULT_SCALE
-        self.y_string = '1 mV'
+        self.y_string = '1 mV'  # It could be a bug. TODO: make sure it is dependent on the default scale
         self.last_t = 0
 
-        self.line = None
+        self.line_exg = None
         self.exg_pointer = 0
         self.orig_exg_pointer = 0
         self.mrk_plot = {'t': [], 'code': [], 'line': []}
@@ -41,6 +43,7 @@ class VisualizationFunctions(AppFunctions):
 
         self.lines_orn = [None, None, None]
         self.orn_pointer = 0
+        # todo: why are we initialising an array here and no where else? move to init plots?
         self.orn_plot = {k: np.array([np.NaN] * 200) for k in Settings.ORN_LIST}
         self.t_orn_plot = np.array([np.NaN] * 200)
 
@@ -57,10 +60,11 @@ class VisualizationFunctions(AppFunctions):
         Initialize EXG, ORN and FFT plots
         """
         if self.ui.plot_orn.getItem(0, 0) is not None:
+            # todo: can we check whether the ui is the correct object so that we don't get null pointers; e.g. it has plot_orn
             self.ui.plot_exg.clear()
             self.ui.plot_fft.clear()
             self.ui.plot_orn.clear()
-            self.line = None
+            self.line_exg = None
 
         self.init_plot_exg()
         self.init_plot_orn()
@@ -75,12 +79,15 @@ class VisualizationFunctions(AppFunctions):
         n_chan = list(self.chan_dict.values()).count(1)
         if n_chan != n_chan_sp:
             print('ERROR chan count does not match')
+            # todo: is it possible to fix this without exiting? or exit, can't leave this as an ignored warning
 
         # Create offsets for each chan line
+        # TODO: Offsets is only relevant for EXG, so it shouldn't be a member of VisualizationFunction.
+        # TODO: offsets is instantiated outside of __init - applies to all other variables below, e.g. active_chan
         self.offsets = np.arange(1, n_chan + 1)[:, np.newaxis].astype(float)
 
         # Set Background color
-        pw = self.ui.plot_exg
+        pw = self.ui.plot_exg  # TODO: Replace pw with a meaningful name, potentially remove new variable
         pw.setBackground(Settings.PLOT_BACKGROUND)
 
         # Disable zoom
@@ -97,12 +104,13 @@ class VisualizationFunctions(AppFunctions):
 
         # Right axis
         pw.showAxis('right')
-        pw.getAxis('right').linkToView(pw.getViewBox())
-        # pw.getAxis('right').setLabel('Voltage')
+        pw.getAxis('right').linkToView(pw.getViewBox())  # todo: looks dangerous - not sure what's going on
+        # pw.getAxis('right').setLabel('Voltage') todo: lots of commenting??? can we just remove this
         self.add_right_axis_ticks()
         # pw.getAxis('right').setPen(color=(255,255,255,200), style=QtCore.Qt.SolidLine)
         # pw.getAxis('right').setPen(style=QtCore.Qt.DashLine)
         pw.getAxis('right').setGrid(200)
+        # todo: is this related to the 200 on l47 that initialises the orn plot? constant? setting?
 
         # Add range of time axis
         # pw.showGrid(x=False, y=True, alpha=0.5)
@@ -110,7 +118,12 @@ class VisualizationFunctions(AppFunctions):
         pw.setRange(yRange=(-0.5, n_chan + 1), xRange=(0, int(timescale)), padding=0.01)
         pw.setLabel('bottom', 'time (s)')
 
-        # Initialize curves for each channel
+        # Initialize curves for each channel todo: initialise properly as above
+        all_curves_list = [
+            self.curve_ch1, self.curve_ch2, self.curve_ch3, self.curve_ch4,
+            self.curve_ch5, self.curve_ch6, self.curve_ch7, self.curve_ch8
+        ]
+        # todo: could this be a for loop
         self.curve_ch1 = pg.PlotCurveItem(pen=Settings.EXG_LINE_COLOR)  # , skipFiniteCheck=True)
         self.curve_ch2 = pg.PlotCurveItem(pen=Settings.EXG_LINE_COLOR)  # , skipFiniteCheck=True)
         self.curve_ch3 = pg.PlotCurveItem(pen=Settings.EXG_LINE_COLOR)  # , skipFiniteCheck=True)
@@ -120,22 +133,18 @@ class VisualizationFunctions(AppFunctions):
         self.curve_ch7 = pg.PlotCurveItem(pen=Settings.EXG_LINE_COLOR)  # , skipFiniteCheck=True)
         self.curve_ch8 = pg.PlotCurveItem(pen=Settings.EXG_LINE_COLOR)  # , skipFiniteCheck=True)
 
-        all_curves_list = [
-            self.curve_ch1, self.curve_ch2, self.curve_ch3, self.curve_ch4,
-            self.curve_ch5, self.curve_ch6, self.curve_ch7, self.curve_ch8
-        ]
-
         # Add curves to plot only if channel is active
-        self.curves_list = []
+        self.active_curves_list = []
         for curve, act in zip(all_curves_list, list(self.chan_dict.values())):
+            # todo: what happens if they're different lengths?
             if act == 1:
                 pw.addItem(curve)
-                self.curves_list.append(curve)
+                self.active_curves_list.append(curve)
 
     def init_plot_orn(self):
-        '''''''''
+        """
         Initialize plot ORN
-        '''
+        """
         pw = self.ui.plot_orn
 
         # Set Background color
@@ -170,7 +179,7 @@ class VisualizationFunctions(AppFunctions):
             plt.setMouseEnabled(x=False, y=False)
             plt.disableAutoRange()
 
-        # Initialize curves for each plot
+        # Initialize curves for each plot todo: for loops!! If possible!!!??? ;)
         self.curve_ax = pg.PlotCurveItem(pen=Settings.ORN_LINE_COLORS[0], name=' accX ')
         self.curve_ay = pg.PlotCurveItem(pen=Settings.ORN_LINE_COLORS[1], name=' accY ')
         self.curve_az = pg.PlotCurveItem(pen=Settings.ORN_LINE_COLORS[2], name=' accZ ')
@@ -206,15 +215,7 @@ class VisualizationFunctions(AppFunctions):
         pw.setLogMode(x=False, y=True)
         pw.setMouseEnabled(x=False, y=False)
 
-        # self.curve_fft_ch1 = pg.PlotCurveItem(pen=Settings.FFT_LINE_COLORS[0], name='ch1')
-        # self.curve_fft_ch2 = pg.PlotCurveItem(pen=Settings.FFT_LINE_COLORS[1], name='ch2')
-        # self.curve_fft_ch3 = pg.PlotCurveItem(pen=Settings.FFT_LINE_COLORS[2], name='ch3')
-        # self.curve_fft_ch4 = pg.PlotCurveItem(pen=Settings.FFT_LINE_COLORS[3], name='ch4')
-        # self.curve_fft_ch5 = pg.PlotCurveItem(pen=Settings.FFT_LINE_COLORS[4], name='ch5')
-        # self.curve_fft_ch6 = pg.PlotCurveItem(pen=Settings.FFT_LINE_COLORS[5], name='ch6')
-        # self.curve_fft_ch7 = pg.PlotCurveItem(pen=Settings.FFT_LINE_COLORS[6], name='ch7')
-        # self.curve_fft_ch8 = pg.PlotCurveItem(pen=Settings.FFT_LINE_COLORS[7], name='ch8')
-
+        #todo: you guessed it! for loops
         self.curve_fft_ch1 = pw.getPlotItem().plot(pen=Settings.FFT_LINE_COLORS[0], name='ch1', skipFiniteCheck=True)
         self.curve_fft_ch2 = pw.getPlotItem().plot(pen=Settings.FFT_LINE_COLORS[1], name='ch2', skipFiniteCheck=True)
         self.curve_fft_ch3 = pw.getPlotItem().plot(pen=Settings.FFT_LINE_COLORS[2], name='ch3', skipFiniteCheck=True)
@@ -230,6 +231,8 @@ class VisualizationFunctions(AppFunctions):
         ]
 
         # Add curves to plot only if channel is active
+        # todo: a lot of repeated code, can we make these and above generic functions?
+        #  don't worry if too much work for now
         self.curves_fft_list = []
         for curve, act in zip(all_curves_fft_list, list(self.chan_dict.values())):
             if act == 1:
@@ -248,7 +251,10 @@ class VisualizationFunctions(AppFunctions):
         self.emit_marker()
 
     def add_original_exg(self, orig_exg):
+        # Add docstring with a description of the input and its size
 
+        # TODO: self.exg_plot_data is a class member of AppFunctions and there are getter and setter for it but it has
+        #  not been used here. Is there any reason? Also it is hard to know what the second and third elements of it are
         first_chan = list(self.exg_plot_data[2].keys())[0]
         n_new_points = len(orig_exg[first_chan])
 
@@ -258,37 +264,49 @@ class VisualizationFunctions(AppFunctions):
             try:
                 d = orig_exg[ch]
             except KeyError:
+                # TODO: we already know which channels are deactive. Can we avoid this step?
                 d = np.array([np.NaN for i in range(n_new_points)])
             self.exg_plot_data[2][ch].put(idxs, d, mode='wrap')
 
         self.orig_exg_pointer += n_new_points
+        # TODO:Can we replace the following section with:
+        #  self.orig_exg_pointer %= len(self.exg_plot_data[2][first_chan])
         if self.orig_exg_pointer >= len(self.exg_plot_data[2][first_chan]):
+            # TODO: probably this while loop is not needed
             while self.orig_exg_pointer >= len(self.exg_plot_data[2][first_chan]):
                 self.orig_exg_pointer -= len(self.exg_plot_data[2][first_chan])
 
     def emit_exg(self, stop=False):
         """
         Get EXG data from packet and emit signal
+        # TODO: add a description about arguments and their type, size etc.
         """
 
         stream_processor = self.explorer.stream_processor
 
         def callback(packet):
+            # TODO: can this callback be a class/instance method
+            # TODO: The line below slows down the program.
+            #  Can we do it only once or every time the settings has changed?
             self.chan_list = [ch for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1]
-            exg_fs = stream_processor.device_info['sampling_rate']
-            timestamp, exg = packet.get_data(exg_fs)
+            exg_sr = stream_processor.device_info['sampling_rate']
+            timestamp, exg = packet.get_data(exg_sr)
 
             # Original data
             orig_exg = dict(zip(self.active_chan, exg))
+            # TODO: Do we need to keep track of the pointer for original data?
             self.add_original_exg(orig_exg)
 
             # From timestamp to seconds
-            if self._vis_time_offset is not None and timestamp[0] < self._vis_time_offset:
+            if self._vis_time_offset is None:
+                self._vis_time_offset = timestamp[0]
+            elif timestamp[0] < self._vis_time_offset:
+                # todo: move to disconnect area
                 self.reset_vis_vars()
-                new_size = self.plot_points()
-                self.exg_plot_data[0] = np.array([np.NaN] * new_size)
+                new_no_points = self.plot_points()
+                self.exg_plot_data[0] = np.array([np.NaN] * new_no_points)
                 self.exg_plot_data[1] = {
-                    ch: np.array([np.NaN] * new_size) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
+                    ch: np.array([np.NaN] * new_no_points) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
                 self.exg_plot_data[2] = {
                     ch: np.array([np.NaN] * self.plot_points(downsampling=False)
                                  ) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
@@ -297,22 +315,16 @@ class VisualizationFunctions(AppFunctions):
                 t_max = t_min + self.get_timeScale()
                 self.ui.plot_exg.setXRange(t_min, t_max, padding=0.01)
 
-            if self._vis_time_offset is None:
-                self._vis_time_offset = timestamp[0]
-
             time_vector = timestamp - self._vis_time_offset
-            # print(f"{self._vis_time_offset=}")
-            # print(f"{timestamp[-1]=}")
-            # print(f"{time_vector[-1]=}")
-            # print()
 
             # Downsampling
             if Settings.DOWNSAMPLING:
-                exg = exg[:, ::int(exg_fs / Settings.EXG_VIS_SRATE)]
-                time_vector = time_vector[::int(exg_fs / Settings.EXG_VIS_SRATE)]
+                exg = exg[:, ::int(exg_sr / Settings.EXG_VIS_SRATE)]
+                time_vector = time_vector[::int(exg_sr / Settings.EXG_VIS_SRATE)]
 
             # Baseline correction
-            # if True: # if testing
+            # todo: please refactor this so it is shorter, cleaner and prettier :)
+            #  general tip - if your code is 'if X then blah blah', change this to 'if not X then skip'
             if self.plotting_filters is not None and self.plotting_filters['offset']:
                 samples_avg = exg.mean(axis=1)
                 if self._baseline_corrector['baseline'] is None:
@@ -329,21 +341,21 @@ class VisualizationFunctions(AppFunctions):
 
                 exg = exg - self._baseline_corrector['baseline'][:, np.newaxis]
             else:
+                # todo: Is this needed in every iteration?
                 self._baseline_corrector['baseline'] = None
 
             # Update ExG unit
             try:
                 exg = self.offsets + exg / self.y_unit
-                # exg /= self.y_unit
-
                 data = dict(zip(self.active_chan, exg))
                 data['t'] = time_vector
                 self.signal_exg.emit(data)
-
             except Exception as e:
+                # todo: handle this properly
                 print(e)
 
         if stop:
+            # todo: a bit more cleaning maybe?
             stream_processor.unsubscribe(topic=TOPICS.filtered_ExG, callback=callback)
             print('unsubscribe')
             return
@@ -485,11 +497,11 @@ class VisualizationFunctions(AppFunctions):
                 to_remove.remove(point)
 
         # Position line:
-        if self.line is not None:
-            self.line.setPos(data['t'][-1])
+        if self.line_exg is not None:
+            self.line_exg.setPos(data['t'][-1])
 
         else:
-            self.line = self.ui.plot_exg.addLine(data['t'][-1], pen='#FF0000')
+            self.line_exg = self.ui.plot_exg.addLine(data['t'][-1], pen='#FF0000')
 
         # Add nans between new and old data
         if NANS[0]:
@@ -520,7 +532,7 @@ class VisualizationFunctions(AppFunctions):
             self.ui.plot_exg.getAxis('bottom').setTicks([[(t, str(tick)) for t, tick in zip(vals, ticks)]])
 
         # Paint curves
-        for curve, ch in zip(self.curves_list, self.active_chan):
+        for curve, ch in zip(self.active_curves_list, self.active_chan):
             try:
                 if NANS[0]:
                     curve.setData(self.exg_plot_data[0], exg_plot_nan[ch], connect='finite')
@@ -739,7 +751,7 @@ class VisualizationFunctions(AppFunctions):
         for ch in self.exg_plot.keys():
             self.exg_plot[ch].extend(data[ch])
 
-        for curve, ch in zip(self.curves_list, self.active_chan):
+        for curve, ch in zip(self.active_curves_list, self.active_chan):
             curve.setData(self.t_exg_plot, self.exg_plot[ch])
 
     def plot_orn_moving(self, data):
@@ -1034,7 +1046,7 @@ class VisualizationFunctions(AppFunctions):
         self.ui.value_yAxis.setCurrentText(self.y_string)
         self.last_t = 0
 
-        self.line = None
+        self.line_exg = None
         self.exg_pointer = 0
         self.orig_exg_pointer = 0
         self.mrk_plot = {'t': [], 'code': [], 'line': []}

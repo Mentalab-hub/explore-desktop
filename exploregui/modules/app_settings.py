@@ -115,7 +115,7 @@ QMessageBox QLabel {
     ORN_LINE_COLORS = ["#00FF00", "#42C4F7", "#FF0000"]
 
     ORN_SRATE = 20  # Hz
-    EXG_VIS_SRATE = 125
+    EXG_VIS_SRATE = 125  # todo: check somewhere in code that this is above 250
     WIN_LENGTH = 10  # Seconds
     MODE_LIST = ['EEG', 'ECG']
     # CHAN_LIST = [
