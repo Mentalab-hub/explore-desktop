@@ -3,13 +3,13 @@ on:
   pull_request:
     branches: [develop]
 jobs:
-  linting:
+  release:
     strategy:
       matrix:
-        os: [ ubuntu-latest ]
-        python: [ 3.8.10 ]
-    name: create installer file
-    runs-on: ubuntu-latest
+        os: [ ubuntu-latest]
+        python: [3.8.10]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - name: Checkout source repository
         uses: actions/checkout@v2
