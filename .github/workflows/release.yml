@@ -40,5 +40,5 @@ jobs:
           pip install -e .
           pyinstaller --onedir --console --icon=mentalab ExploreGUI.spec
           mv  -v dist/ExploreGUI/* installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data/
-          ./Tools/QtInstallerFramework/4.2/bin/binarycreator -c installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/config/config.xml -p packages --verbose ExploreGUIInstaller.run
+          ./Tools/QtInstallerFramework/4.2/bin/binarycreator -c installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/config/config.xml -p installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages --verbose ExploreGUIInstaller.run
           ls
