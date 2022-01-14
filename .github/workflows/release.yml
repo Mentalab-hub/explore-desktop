@@ -1,0 +1,39 @@
+name: release
+on:
+  pull_request:
+    branches: [develop]
+jobs:
+  linting:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        python: [ 3.8.10 ]
+    name: create installer file
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install non-python dependencies on Ubuntu
+      run: |
+        sudo apt-get update -y
+        # pytest-qt's dependency
+        sudo apt-get install -y libgles2-mesa-dev
+        # explorepy's dependency
+        sudo apt-get install libbluetooth-dev
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+      run: |
+        pip install aqtinstall pyinstaller==4.7
+        aqt install-qt linux desktop 5.12.12 
+        aqt install-tool linux desktop tools_ifw
+        pip install -e .
+        pyinstaller --onedir --console --icon=mentalab ExploreGUI.spec
+        mv  -v dist/ExploreGUI/* installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data/
+        Tools/QtInstallerFramework/4.2/bin/binarycreator -c installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/config/config.xml -p packages --verbose ExploreGUIInstaller.run
+        ls
