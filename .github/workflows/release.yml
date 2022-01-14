@@ -28,6 +28,8 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
+
+      - name: install qt and qt-ifw
         run: |
           pip install aqtinstall pyinstaller==4.7
           aqt install-qt linux desktop 5.12.12 
