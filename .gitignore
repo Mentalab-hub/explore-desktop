@@ -155,3 +155,6 @@ modules/old
 
 # csv
 *.csv
+
+# DS_Store
+*.DS_Store
