@@ -1,6 +1,6 @@
 # ExploreGUI Installer for MacOs
 
-This page provides instructions for creating an installer for MacOS Big Sur.
+This page provides instructions for creating an installer for MacOS Big Sur (version 11.5.2).
 
 ## Dependencies
 - Python 3.8.12 and a virtual environment
@@ -8,7 +8,7 @@ This page provides instructions for creating an installer for MacOS Big Sur.
 - [Qt Installer Framework] (https://download.qt.io/official_releases/qt-installer-framework/4.2.0/)
 
 ## How to
-
+### Generate the ExploreGUI.app
 - In a terminal activate the virtual environment and navigate to ExploreGUI folder.
 - Install ExploreGUI using `pip install -e .`
 - Run `pyinstaller --onedir --windowed --icon=MentalabLogo ExploreGUI_mac.spec`.
@@ -17,9 +17,9 @@ This should create a directory and an .app file both named `ExploreGUI` in the `
 Right-click on the .app and select 'Show Package Contents' and access the directory `Contents/MacOS/explorepy`.
 Go to the explorepy folder used in your environment (e.g. `/Users/usr_name/opt/anaconda3/envs/gui8/lib/python3.8/site-packages/explorepy`) and locate the file `btScan`.
 Copy the `btScan` file and paste it into the `Contents/MacOS/explorepy` folder from the app bundle.
-You can run the `ExploreGUI` app to make sure the software works as intended.
+You can run the `ExploreGUI.app` to make sure the software works as intended.
 
-
+### Generate the Installer
 1. Install Qt Installer Framework and locate its directory (e.g. home/Qt/QtIFW).
 2. Inside the QtIFW directory, locate the `binarycreator` file and copy its path.
 3. Place all the contents of the `ExploreGUI` directory from the `dist` folder inside the `/installer/MacOs/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data` directory.
