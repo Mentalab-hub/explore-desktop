@@ -1,28 +1,43 @@
 import datetime
-import sys
 import os
+import sys
 
-from PySide6.QtWidgets import QApplication, QGraphicsDropShadowEffect, QMainWindow, QPushButton, QSizeGrip
-from PySide6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, Qt, Signal, QTimer, Slot
-from PySide6.QtGui import QColor, QFont, QIcon, QIntValidator
-
-import explorepy as xpy
 import exploregui
+import explorepy as xpy
+from exploregui.modules import (
+    AppFunctions,
+    BTFunctions,
+    ConfigFunctions,
+    IMPFunctions,
+    LSLFunctions,
+    RecordFunctions,
+    Settings,
+    Ui_MainWindow,
+    VisualizationFunctions
+)
+from PySide6.QtCore import (
+    QEasingCurve,
+    QEvent,
+    QPropertyAnimation,
+    Qt,
+    QTimer,
+    Signal,
+    Slot
+)
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QIcon,
+    QIntValidator
+)
+from PySide6.QtWidgets import (
+    QApplication,
+    QGraphicsDropShadowEffect,
+    QMainWindow,
+    QPushButton,
+    QSizeGrip
+)
 
-from exploregui.modules import Settings, Ui_MainWindow
-from exploregui.modules import AppFunctions, BTFunctions, ConfigFunctions, VisualizationFunctions
-from exploregui.modules import IMPFunctions, LSLFunctions, RecordFunctions
-
-# pyside6-uic ui_main_window.ui > ui_main_window.py
-# pyside6-uic dialog_plot_settings.ui > dialog_plot_settings.py
-# pyside6-uic dialog_recording_settings.ui > dialog_recording_settings.py
-# pyside6-rcc app_resources.qrc -o app_resources_rc.py
-# from exploregui import app_resources_rc
-
-# explorepy==1.6.0 pyside6==6.2.1 pandas==1.3.4 pyqtgraph==0.12.3 mne==0.24.0 appdirs==1.4.3 certifi==2020.12.5 Click==7.0
-# Jinja2==3.0.3 MarkupSafe==2.0.1 numpy==1.21.4 packaging==21.3 Pillow==8.4.0 pyEDFlib==0.1.22 pylsl==1.15.0
-# pyparsing==3.0.6 python-dateutil==2.8.1 PyYAML==5.3.1 scipy==1.5.2 sentry-sdk==1.0.0 six==1.15.0
-# tornado==6.0.4 urllib3==1.26.4 shiboken6==6.2.1 pytz==2021.3
 
 VERSION_APP = exploregui.__version__
 WINDOW_SIZE = False
@@ -39,8 +54,10 @@ class MainWindow(QMainWindow):
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        # TODO: Set a dynamic path here
         self.setWindowIcon(
-            QIcon(os.path.join(r'C:\Users\ProSomno\Documents\Mentalab\explorepy-gui\exploregui\images', 'MentalabLogo.png')))
+            QIcon(os.path.join(r'C:\Users\ProSomno\Documents\Mentalab\explorepy-gui\exploregui\images',
+                               'MentalabLogo.png')))
         self.setWindowTitle('ExploreGUI')
 
         self.explorer = xpy.Explore()

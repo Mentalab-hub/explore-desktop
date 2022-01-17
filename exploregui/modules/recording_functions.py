@@ -1,10 +1,14 @@
-from PySide6.QtCore import QTimer, Slot
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication
+import os
+from datetime import datetime
+
 from exploregui.modules.app_functions import AppFunctions
 from exploregui.modules.dialogs import RecordingDialog
-from datetime import datetime
-import os
+from PySide6.QtCore import (
+    QTimer,
+    Slot
+)
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QApplication
 
 
 class RecordFunctions(AppFunctions):

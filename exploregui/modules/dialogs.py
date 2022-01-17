@@ -1,11 +1,22 @@
 import os
-from PySide6.QtCore import QRegularExpression
-from PySide6.QtGui import QIcon, QRegularExpressionValidator
-
-from exploregui.modules.ui import Ui_PlotDialog
-from exploregui.modules.ui import Ui_RecordingDialog
-from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QFileDialog
 import sys
+
+from exploregui.modules.ui import (
+    Ui_PlotDialog,
+    Ui_RecordingDialog
+)
+from PySide6.QtCore import QRegularExpression
+from PySide6.QtGui import (
+    QIcon,
+    QRegularExpressionValidator
+)
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog
+)
+
 
 stylesheet_cancel = (
     "QPushButton{\n"
@@ -34,8 +45,10 @@ class PlotDialog(QDialog):
         super().__init__(parent)
         self.ui = Ui_PlotDialog()
         self.ui.setupUi(self)
+        # TODO: Set a dynamic path here
         self.setWindowIcon(
-            QIcon(os.path.join(r'C:\Users\ProSomno\Documents\Mentalab\explorepy-gui\exploregui\images', 'MentalabLogo.png')))
+            QIcon(os.path.join(r'C:\Users\ProSomno\Documents\Mentalab\explorepy-gui\exploregui\images',
+                               'MentalabLogo.png')))
         self.ui.lbl_warning.hide()
         self.ui.cb_offset.setToolTip("Remove the DC offset of the signal based on the previous signal values")
         self.setWindowTitle("Visualization Settings")
@@ -196,10 +209,14 @@ class PlotDialog(QDialog):
             return False
 
         return {
-            "offset": self.ui.cb_offset.isChecked(),
-            "notch": None if self.ui.value_notch.currentText() == "" else int(self.ui.value_notch.currentText()),
-            "lowpass": None if self.ui.value_lowpass.text() in [None, 'None', ""] else float(self.ui.value_lowpass.text()),
-            "highpass": None if self.ui.value_highpass.text() in [None, 'None', ""] else float(self.ui.value_highpass.text())
+            "offset":
+                self.ui.cb_offset.isChecked(),
+            "notch":
+                None if self.ui.value_notch.currentText() == "" else int(self.ui.value_notch.currentText()),
+            "lowpass":
+                None if self.ui.value_lowpass.text() in [None, 'None', ""] else float(self.ui.value_lowpass.text()),
+            "highpass":
+                None if self.ui.value_highpass.text() in [None, 'None', ""] else float(self.ui.value_highpass.text())
         }
 
 
@@ -208,8 +225,10 @@ class RecordingDialog(QDialog):
         super().__init__(parent)
         self.ui = Ui_RecordingDialog()
         self.ui.setupUi(self)
-        self.setWindowIcon(
-            QIcon(os.path.join(r'C:\Users\ProSomno\Documents\Mentalab\explorepy-gui\exploregui\images', 'MentalabLogo.png')))
+
+        # TODO: Set a dynamic path here
+        self.setWindowIcon(QIcon(os.path.join(r'C:\Users\ProSomno\Documents\Mentalab\explorepy-gui\exploregui\images',
+                                              'MentalabLogo.png')))
         self.setWindowTitle("Recording Settings")
         self.ui.buttonBox.button(QDialogButtonBox.Cancel).setStyleSheet(
             stylesheet_cancel)

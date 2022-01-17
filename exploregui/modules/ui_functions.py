@@ -1,11 +1,20 @@
-
-# MAIN FILE
-# ///////////////////////////////////////////////////////////////
-
-from PySide6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QTimer, Qt
-from PySide6.QtGui import QColor, QIcon
-from PySide6.QtWidgets import QGraphicsDropShadowEffect, QSizeGrip
 from exploregui.modules.app_settings import Settings
+from PySide6.QtCore import (
+    QEasingCurve,
+    QEvent,
+    QPropertyAnimation,
+    Qt,
+    QTimer
+)
+from PySide6.QtGui import (
+    QColor,
+    QIcon
+)
+from PySide6.QtWidgets import (
+    QGraphicsDropShadowEffect,
+    QSizeGrip
+)
+
 
 '''
 # GLOBALS

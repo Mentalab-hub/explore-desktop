@@ -1,13 +1,17 @@
 # from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QApplication, QCheckBox
-from exploregui.modules.app_functions import AppFunctions
-# from exploregui.modules.helpers import wait_cursor, plot_points, display_msg
-from explorepy.tools import bt_scan
-import numpy as np
-from exploregui.modules.app_settings import Settings
-import explorepy._exceptions as xpy_ex
-from explorepy.stream_processor import TOPICS
 import os
+
+import explorepy._exceptions as xpy_ex
+import numpy as np
+from exploregui.modules.app_functions import AppFunctions
+from exploregui.modules.app_settings import Settings
+from explorepy.stream_processor import TOPICS
+from explorepy.tools import bt_scan
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox
+)
+
 
 # DISABLED_STYLESHEET = """
 #     background-color: rgb(129,133,161);
