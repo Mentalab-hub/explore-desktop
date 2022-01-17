@@ -18,15 +18,15 @@ jobs:
 
       - name: Install non-python dependencies on Ubuntu
         run: |
-          sudo apt-get update -y
+          sudo apt-get update -yq
           # pytest-qt's dependency
-          sudo apt-get install -y libgles2-mesa-dev
+          sudo apt-get install -yq libgles2-mesa-dev
           # explorepy's dependency
-          sudo apt-get install libbluetooth-dev libpugixml1v5 libxkbcommon-x11-0
+          sudo apt-get install -yq libbluetooth-dev libpugixml1v5 libxkbcommon-x11-0
           # instal pylsl's dependency
           wget https://github.com/sccn/liblsl/releases/download/v1.15.2/liblsl-1.15.2-focal_amd64.deb
           sudo dpkg -i liblsl-1.15.2-focal_amd64.deb
-          sudo apt-get install -f
+          sudo apt-get install -yq -f
 
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v2
@@ -45,21 +45,16 @@ jobs:
           pip install -e .
           pip list
 
-#      - name: Create installer file
-#        run: |
-#          pyinstaller --onedir --console --icon=mentalab ExploreGUI.spec
-#          mv  -v dist/ExploreGUI/* installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data/
-#          ./Tools/QtInstallerFramework/4.2/bin/binarycreator -c installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/config/config.xml -p installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages --verbose ExploreGUIInstaller.run
-#          ls
-#
-#      - name: upload artifact
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: ExploreGUI_installer_${{ matrix.os }}
-#          path: ExploreGUIInstaller.run
+      - name: Create installer file
+        run: |
+          pyinstaller --onedir --console --icon=mentalab ExploreGUI.spec
+          mv  -v dist/ExploreGUI/* installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data/
+          ./Tools/QtInstallerFramework/4.2/bin/binarycreator -c installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/config/config.xml -p installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages --verbose ExploreGUIInstaller.run
+          ls
+          python --version
 
-#      - name: upload artifact
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: ExploreGUI_installer_${{ matrix.os }}
-#          path: ./dist/ExploreGUI/
+      - name: upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ExploreGUI_installer_${{ matrix.os }}
+          path: ExploreGUIInstaller.run
