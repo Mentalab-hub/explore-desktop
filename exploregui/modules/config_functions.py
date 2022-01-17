@@ -1,9 +1,14 @@
-from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QCheckBox, QMessageBox
-from exploregui.modules import AppFunctions
-from exploregui.modules import Settings
 import numpy as np
+from exploregui.modules import (
+    AppFunctions,
+    Settings
+)
 from exploregui.modules.bt_functions import DISABLED_STYLESHEET
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QMessageBox
+)
 
 
 class ConfigFunctions(AppFunctions):
@@ -176,7 +181,8 @@ class ConfigFunctions(AppFunctions):
             self.exg_plot_data[1] = {
                 ch: np.array([np.NaN] * points) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
             self.exg_plot_data[2] = {
-                ch: np.array([np.NaN] * self.plot_points(downsampling=False)) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1
+                ch: np.array([np.NaN] * self.plot_points(downsampling=False
+                                                         )) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1
             }
             AppFunctions.exg_plot_data = self.exg_plot_data
 
@@ -187,7 +193,8 @@ class ConfigFunctions(AppFunctions):
             self.exg_plot_data[1] = {
                 ch: np.array([np.NaN] * points) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
             self.exg_plot_data[2] = {
-                ch: np.array([np.NaN] * self.plot_points(downsampling=False)) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1
+                ch: np.array([np.NaN] * self.plot_points(downsampling=False
+                                                         )) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1
             }
             AppFunctions.exg_plot_data = self.exg_plot_data
 

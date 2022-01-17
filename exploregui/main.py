@@ -3,9 +3,6 @@ import sys
 
 from exploregui import MainWindow
 from PySide6.QtWidgets import QApplication
-# import faulthandler
-# import cgitb
-# import cProfile
 
 
 def main():

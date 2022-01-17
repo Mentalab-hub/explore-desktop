@@ -1,15 +1,18 @@
+import copy
 import time
-from PySide6.QtCore import Slot
-from explorepy.stream_processor import TOPICS
-from explorepy.tools import HeartRateEstimator
+import warnings
+
 import numpy as np
-from scipy.ndimage.filters import gaussian_filter1d
+import pyqtgraph as pg
 from exploregui.modules.app_functions import AppFunctions
 from exploregui.modules.app_settings import Settings
 from exploregui.modules.dialogs import PlotDialog
-import pyqtgraph as pg
-import copy
-import warnings
+from explorepy.stream_processor import TOPICS
+from explorepy.tools import HeartRateEstimator
+from PySide6.QtCore import Slot
+from scipy.ndimage.filters import gaussian_filter1d
+
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 NANS = [False, False]  # exg, orn
@@ -287,7 +290,8 @@ class VisualizationFunctions(AppFunctions):
                 self.exg_plot_data[1] = {
                     ch: np.array([np.NaN] * new_size) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
                 self.exg_plot_data[2] = {
-                    ch: np.array([np.NaN] * self.plot_points(downsampling=False)) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
+                    ch: np.array([np.NaN] * self.plot_points(downsampling=False)
+                                 ) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
 
                 t_min = 0
                 t_max = t_min + self.get_timeScale()
@@ -317,10 +321,9 @@ class VisualizationFunctions(AppFunctions):
                     try:
                         self._baseline_corrector['baseline'] = \
                             self._baseline_corrector['baseline'] - \
-                            (
-                                (self._baseline_corrector['baseline'] - samples_avg) / self._baseline_corrector['MA_length']
-                                * exg.shape[1]
-                        )
+                            ((self._baseline_corrector['baseline'] - samples_avg
+                              ) / self._baseline_corrector['MA_length'] * exg.shape[1]
+                             )
                     except ValueError:
                         self._baseline_corrector['baseline'] = samples_avg
 
@@ -331,7 +334,7 @@ class VisualizationFunctions(AppFunctions):
             # Update ExG unit
             try:
                 exg = self.offsets + exg / self.y_unit
-            # exg /= self.y_unit
+                # exg /= self.y_unit
 
                 data = dict(zip(self.active_chan, exg))
                 data['t'] = time_vector
@@ -456,18 +459,22 @@ class VisualizationFunctions(AppFunctions):
             for idx_t in range(len(self.r_peak['t'])):
                 # if self.r_peak['t'][idx_t][0] < self.exg_plot_data[0][0]:
                 if self.r_peak['t'][idx_t] < data['t'][-1]:
-
                     new_t = self.r_peak['t'][idx_t] + self.get_timeScale()
-                    new_point = self.ui.plot_exg.plot(
-                        [new_t], [self.r_peak['r_peak'][idx_t]], pen=None,
-                        symbolBrush=(200, 0, 0, 200), symbol='o', symbolSize=8)
+                    new_point = self.ui.plot_exg.plot([new_t],
+                                                      [self.r_peak['r_peak'][idx_t]],
+                                                      pen=None,
+                                                      symbolBrush=(200, 0, 0, 200),
+                                                      symbol='o',
+                                                      symbolSize=8)
                     self.r_peak_replot['t'].append(new_t)
                     self.r_peak_replot['r_peak'].append(self.r_peak['r_peak'][idx_t])
                     self.r_peak_replot['points'].append(new_point)
 
                     self.ui.plot_exg.removeItem(self.r_peak['points'][idx_t])
-                    to_remove.append(
-                        [self.r_peak['t'][idx_t], self.r_peak['r_peak'][idx_t], self.r_peak['points'][idx_t]])
+                    to_remove.append([self.r_peak['t'][idx_t],
+                                      self.r_peak['r_peak'][idx_t],
+                                      self.r_peak['points'][idx_t]
+                                      ])
             for point in to_remove:
                 # print(f'{self.r_peak["t"]=}')
                 # print(f'{i=}')
@@ -507,11 +514,10 @@ class VisualizationFunctions(AppFunctions):
             t_ticks = self.exg_plot_data[0].copy()
             t_ticks[self.exg_pointer:] -= self.get_timeScale()
             t_ticks = t_ticks.astype(int)
-            l_points = int(len(self.exg_plot_data[0]) / 10)
+            l_points = int(len(self.exg_plot_data[0]) / int(self.get_timeScale()))
             vals = self.exg_plot_data[0][::l_points]
             ticks = t_ticks[::l_points]
-            self.ui.plot_exg.getAxis('bottom').setTicks(
-                [[(t, str(tick)) for t, tick in zip(vals, ticks)]])
+            self.ui.plot_exg.getAxis('bottom').setTicks([[(t, str(tick)) for t, tick in zip(vals, ticks)]])
 
         # Paint curves
         for curve, ch in zip(self.curves_list, self.active_chan):
@@ -538,10 +544,9 @@ class VisualizationFunctions(AppFunctions):
                 print()
             if self.r_peak_replot['t'][idx_t] < data['t'][-1]:
                 self.ui.plot_exg.removeItem(self.r_peak_replot['points'][idx_t])
-                to_remove_replot.append(
-                    [self.r_peak_replot['t'][idx_t],
-                    self.r_peak_replot['r_peak'][idx_t],
-                    self.r_peak_replot['points'][idx_t]])
+                to_remove_replot.append([self.r_peak_replot['t'][idx_t],
+                                         self.r_peak_replot['r_peak'][idx_t],
+                                         self.r_peak_replot['points'][idx_t]])
         for point in to_remove_replot:
             # try:
             self.r_peak_replot['t'].remove(point[0])
@@ -666,9 +671,9 @@ class VisualizationFunctions(AppFunctions):
         pw.setXRange(0, 70, padding=0.01)
 
         exg_fs = self.explorer.stream_processor.device_info['sampling_rate']
-        exg_data = np.array(
-            [self.exg_plot_data[2][key][~np.isnan(self.exg_plot_data[2][key])] for key in self.exg_plot_data[2].keys()],
-            dtype=object)
+        exg_data = np.array([self.exg_plot_data[2][key][~np.isnan(self.exg_plot_data[2][key]
+                                                                  )] for key in self.exg_plot_data[2].keys()],
+                            dtype=object)
         if (len(exg_data.shape) == 1) or (exg_data.shape[1] < exg_fs * 5):
             return
 
@@ -823,7 +828,8 @@ class VisualizationFunctions(AppFunctions):
         self.exg_plot_data[1] = {
             ch: np.array([np.NaN] * new_size) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
         self.exg_plot_data[2] = {
-            ch: np.array([np.NaN] * self.plot_points(downsampling=False)) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
+            ch: np.array([np.NaN] * self.plot_points(downsampling=False)
+                         ) for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1}
 
         new_size_orn = self.plot_points(orn=True)
         self.orn_pointer = 0
@@ -857,8 +863,8 @@ class VisualizationFunctions(AppFunctions):
                 self.exg_plot_data[1][chan] = (value - temp_offset) * (old_unit / new_unit) + temp_offset
 
         # Rescale r_peaks
-        self.r_peak['r_peak'] = list((np.array(self.r_peak['r_peak']) - self.offsets[0]) * \
-            (old_unit / self.y_unit) + self.offsets[0])
+        self.r_peak['r_peak'] = list((np.array(self.r_peak['r_peak']) - self.offsets[0]
+                                      ) * (old_unit / self.y_unit) + self.offsets[0])
 
         # Remove old rpeaks
         for p in self.r_peak['points']:
@@ -867,14 +873,17 @@ class VisualizationFunctions(AppFunctions):
 
         # plot scaled rpeaks
         for i in range(len(self.r_peak['t'])):
-            point = self.ui.plot_exg.plot(
-                [self.r_peak['t'][i]], [self.r_peak['r_peak'][i]],
-                pen=None, symbolBrush=(200, 0, 0), symbol='o', symbolSize=8)
+            point = self.ui.plot_exg.plot([self.r_peak['t'][i]],
+                                          [self.r_peak['r_peak'][i]],
+                                          pen=None,
+                                          symbolBrush=(200, 0, 0),
+                                          symbol='o',
+                                          symbolSize=8)
             self.r_peak['points'].append(point)
 
         # Rescale replotted rpeaks
-        self.r_peak_replot['r_peak'] = list((np.array(self.r_peak_replot['r_peak']) - self.offsets[0]) * \
-            (old_unit / self.y_unit) + self.offsets[0])
+        self.r_peak_replot['r_peak'] = list((np.array(self.r_peak_replot['r_peak']) - self.offsets[0]
+                                             ) * (old_unit / self.y_unit) + self.offsets[0])
 
         # Remove old rpeaks
         for p in self.r_peak_replot['points']:
@@ -883,9 +892,12 @@ class VisualizationFunctions(AppFunctions):
 
         # plot scaled rpeaks
         for i in range(len(self.r_peak_replot['t'])):
-            point = self.ui.plot_exg.plot(
-                [self.r_peak_replot['t'][i]], [self.r_peak_replot['r_peak'][i]],
-                pen=None, symbolBrush=(200, 0, 0, 200), symbol='o', symbolSize=8)
+            point = self.ui.plot_exg.plot([self.r_peak_replot['t'][i]],
+                                          [self.r_peak_replot['r_peak'][i]],
+                                          pen=None,
+                                          symbolBrush=(200, 0, 0, 200),
+                                          symbol='o',
+                                          symbolSize=8)
             self.r_peak_replot['points'].append(point)
 
         # self.add_right_axis_ticks()
@@ -939,9 +951,7 @@ class VisualizationFunctions(AppFunctions):
         i = i if i >= 0 else 0
         f = self.exg_pointer if i + self.exg_pointer >= (2 * sr) else (2 * sr)
         # f = self.exg_pointer
-        ecg_data = (
-            np.array(self.exg_plot_data[1]['ch1'])[i:f] - self.offsets[0]
-        ) * self.y_unit
+        ecg_data = (np.array(self.exg_plot_data[1]['ch1'])[i:f] - self.offsets[0]) * self.y_unit
         time_vector = np.array(self.exg_plot_data[0])[i:f]
         # print(time_vector[-1])
 
@@ -962,9 +972,12 @@ class VisualizationFunctions(AppFunctions):
                     self.r_peak['t'].append(self.peaks_time[i])
                     self.r_peak['r_peak'].append(self.peaks_val[i])
 
-                    point = self.ui.plot_exg.plot(
-                        [self.peaks_time[i]], [self.peaks_val[i]],
-                        pen=None, symbolBrush=(200, 0, 0), symbol='o', symbolSize=8)
+                    point = self.ui.plot_exg.plot([self.peaks_time[i]],
+                                                  [self.peaks_val[i]],
+                                                  pen=None,
+                                                  symbolBrush=(200, 0, 0),
+                                                  symbol='o',
+                                                  symbolSize=8)
 
                     self.r_peak['points'].append(point)
 

@@ -1,11 +1,13 @@
 from contextlib import contextmanager
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QCursor
-from PySide6.QtWidgets import QApplication, QMessageBox
-from exploregui.modules.app_settings import Settings
-# from exploregui.modules.bt_functions import BTFunctions
 
 import numpy as np
+from exploregui.modules.app_settings import Settings
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QCursor
+from PySide6.QtWidgets import (
+    QApplication,
+    QMessageBox
+)
 
 
 class AppFunctions():
