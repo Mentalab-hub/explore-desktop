@@ -10,7 +10,9 @@ block_cipher = None
 main_path = path.join('exploregui', 'main.py')
 
 old_path = path.join(path.dirname(explorepy.__file__), 'btScan')
+# /Users/andrea/opt/anaconda3/envs/gui8/lib/python3.8/site-packages/explorepy/btScan
 new_path = path.join(os.getcwd(), 'dist', 'ExploreGUI', 'explorepy', 'btScan')
+# /Users/andrea/MentalabRepo/explorepy-gui/dist/ExploreGUI/explorepy/btScan
 
 a = Analysis([main_path],
              pathex=[get_python_lib()],
@@ -26,7 +28,7 @@ a = Analysis([main_path],
              cipher=block_cipher,
              noarchive=False)
 a.datas += Tree(path.dirname(pylsl.__file__), prefix='pylsl', excludes='__pycache__')
-# a.datas += Tree(path.dirname(explorepy.__file__), prefix='explorepy', excludes='__pycache__')
+a.datas += Tree(path.dirname(explorepy.__file__), prefix='explorepy', excludes='__pycache__')
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 
@@ -69,4 +71,4 @@ app = BUNDLE(coll,
              })
 
 # copy2(old_path, new_path)
-os.system(f'sudo cp {old_path} {new_path}')
+# os.system(f'sudo cp {old_path} {new_path}')
