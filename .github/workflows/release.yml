@@ -43,6 +43,7 @@ jobs:
           pip install pyinstaller==4.7
           # Install ExploreGUI
           pip install -e .
+          pip list
 
       - name: Create installer file
         run: |
