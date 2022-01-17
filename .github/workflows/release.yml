@@ -45,9 +45,9 @@ jobs:
           pip install -e .
           pip list
 
-      - name: Create installer file
-        run: |
-          pyinstaller --onedir --console --icon=mentalab ExploreGUI.spec
+#      - name: Create installer file
+#        run: |
+#          pyinstaller --onedir --console --icon=mentalab ExploreGUI.spec
 #          mv  -v dist/ExploreGUI/* installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data/
 #          ./Tools/QtInstallerFramework/4.2/bin/binarycreator -c installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/config/config.xml -p installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages --verbose ExploreGUIInstaller.run
 #          ls
@@ -58,8 +58,8 @@ jobs:
 #          name: ExploreGUI_installer_${{ matrix.os }}
 #          path: ExploreGUIInstaller.run
 
-      - name: upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: ExploreGUI_installer_${{ matrix.os }}
-          path: ./dist/ExploreGUI/
+#      - name: upload artifact
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: ExploreGUI_installer_${{ matrix.os }}
+#          path: ./dist/ExploreGUI/
