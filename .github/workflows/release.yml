@@ -27,8 +27,10 @@ jobs:
           wget https://github.com/sccn/liblsl/releases/download/v1.15.2/liblsl-1.15.2-focal_amd64.deb
           sudo dpkg -i liblsl-1.15.2-focal_amd64.deb
           sudo apt-get install -yq -f
-          # Install tkinter
-          sudo apt-get install -yq python3-tk
+          # Install tk and tcl
+          sudo apt-get install -yq tcl tk expect
+#          # Install tkinter
+#          sudo apt-get install -yq python3-tk
 
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v2
