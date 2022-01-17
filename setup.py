@@ -16,7 +16,11 @@ requirements = ['PySide6>=6.1.2',
                 'numpy'
                 ]
 
-test_requirements = []
+test_requirements = ["pytest==6.2.5",
+                     "flake8==4.0.1",
+                     "isort==5.10.1",
+                     "pytest-qt==4.0.2"]
+extras = {"test": test_requirements}
 
 setup(
     author="Mentalab GmbH.",
@@ -37,7 +41,7 @@ setup(
     name='exploregui',
     packages=find_packages(include=['exploregui', 'exploregui.*']),
     test_suite='tests',
-    tests_require=test_requirements,
+    extras_require=extras,
     url='https://github.com/Mentalab-hub/explorepy-gui',
     version='0.1.0',
     zip_safe=False,
