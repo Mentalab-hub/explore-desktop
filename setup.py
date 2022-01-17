@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 with open('README.md') as readme_file:
     readme = readme_file.read()
 
-requirements = ['PySide6>=6.1.2',
+requirements = ['PySide6==6.2.1',
                 'pandas==1.3.4',
                 'pyqtgraph==0.12.3 ',
                 'mne==0.24.1',
