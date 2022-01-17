@@ -158,3 +158,6 @@ modules/old
 
 # DS_Store
 *.DS_Store
+
+# set up files
+installer/Windows/output/setup_ExploreGUI.exe
