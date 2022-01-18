@@ -35,7 +35,15 @@ jobs:
           sudo apt-get install -yq -f
           # Install tk and tcl
           sudo apt-get install -yq tcl tk expect xcb
-#          # Install tkinter
+          # QT deps
+          sudo cp /etc/apt/sources.list /etc/apt/sources.list~
+          sudo sed -Ei 's/^# deb-src /deb-src /' /etc/apt/sources.list
+          sudo apt-get update
+          sudo apt-get build-dep -yq qt5-default
+          sudo apt-get install -yq libxcb-xinerama0-dev
+          sudo apt install x11-apps
+#          curl -fsSL https://raw.githubusercontent.com/mviereck/x11docker/master/x11docker | sudo bash -s -- --update
+      #          # Install tkinter
 #          sudo apt-get install -yq python3-tk
 
       - name: install qt and qt-ifw
@@ -52,19 +60,20 @@ jobs:
           # Install ExploreGUI
           pip install -e .
           pip list
+          ls 5.12.12/gcc_64/plugins/platforms/
 
       - name: Create installer file
         run: |
           export QT_DEBUG_PLUGINS=1
           sudo apt-get install -yq --reinstall libxcb-xinerama0
           pyinstaller --onedir --console --icon=mentalab ExploreGUI.spec
-#          mv  -v dist/ExploreGUI/* installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data/
-#          ./Tools/QtInstallerFramework/4.2/bin/binarycreator -c installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/config/config.xml -p installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages --verbose ExploreGUIInstaller.run
-#          ls
-#          python --version
-#
-#      - name: upload artifact
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: ExploreGUI_installer_${{ matrix.os }}
-#          path: ExploreGUIInstaller.run
+          mv  -v dist/ExploreGUI/* installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data/
+          ./Tools/QtInstallerFramework/4.2/bin/binarycreator -c installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/config/config.xml -p installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages --verbose ExploreGUIInstaller.run
+          ls
+          python --version
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ExploreGUI_installer_${{ matrix.os }}
+          path: ExploreGUIInstaller.run
