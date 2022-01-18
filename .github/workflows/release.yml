@@ -24,7 +24,7 @@ jobs:
       - name: Install non-python dependencies on Ubuntu
         run: |
           sudo apt-get update -yq
-          sudo apt-get install -yq libxcb-iccm4
+          sudo apt-get install -yq libx11-xcb1
           # pytest-qt's dependency
           sudo apt-get install -yq libgles2-mesa-dev
           # explorepy's dependency
