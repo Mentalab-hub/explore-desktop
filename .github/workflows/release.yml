@@ -16,6 +16,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+
       - name: Install non-python dependencies on Ubuntu
         run: |
           sudo apt-get update -yq
@@ -32,14 +37,11 @@ jobs:
 #          # Install tkinter
 #          sudo apt-get install -yq python3-tk
 
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python }}
-
       - name: install qt and qt-ifw
         run: |
           python -m pip install --upgrade pip
+          # install tkinter
+          sudo apt-get install -yq python3-tk
           # Install qt installer, qt and qt_ifw
           pip install aqtinstall
           aqt install-qt linux desktop 5.12.12 
@@ -54,12 +56,12 @@ jobs:
         run: |
           pyinstaller --onedir --console --icon=mentalab ExploreGUI.spec
           mv  -v dist/ExploreGUI/* installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data/
-          ./Tools/QtInstallerFramework/4.2/bin/binarycreator -c installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/config/config.xml -p installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages --verbose ExploreGUIInstaller.run
-          ls
-          python --version
-
-      - name: upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: ExploreGUI_installer_${{ matrix.os }}
-          path: ExploreGUIInstaller.run
+#          ./Tools/QtInstallerFramework/4.2/bin/binarycreator -c installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/config/config.xml -p installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages --verbose ExploreGUIInstaller.run
+#          ls
+#          python --version
+#
+#      - name: upload artifact
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: ExploreGUI_installer_${{ matrix.os }}
+#          path: ExploreGUIInstaller.run
