@@ -24,6 +24,7 @@ jobs:
       - name: Install non-python dependencies on Ubuntu
         run: |
           sudo apt-get update -yq
+          sudo apt-get install -yq libxcb-iccm4
           # pytest-qt's dependency
           sudo apt-get install -yq libgles2-mesa-dev
           # explorepy's dependency
@@ -55,8 +56,9 @@ jobs:
       - name: Create installer file
         run: |
           export QT_DEBUG_PLUGINS=1
+          sudo apt-get install -yq --reinstall libxcb-xinerama0
           pyinstaller --onedir --console --icon=mentalab ExploreGUI.spec
-          mv  -v dist/ExploreGUI/* installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data/
+#          mv  -v dist/ExploreGUI/* installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data/
 #          ./Tools/QtInstallerFramework/4.2/bin/binarycreator -c installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/config/config.xml -p installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages --verbose ExploreGUIInstaller.run
 #          ls
 #          python --version
