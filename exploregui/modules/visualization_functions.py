@@ -369,6 +369,8 @@ class VisualizationFunctions(AppFunctions):
         stream_processor = self.explorer.stream_processor
 
         def callback(packet):
+            # TODO: Can we move this method outside of emit_orn? And change the name of "emit_orn" function to
+            #  subscribe_orn or anything meaningful in this contex
             timestamp, orn_data = packet.get_data()
             if self._vis_time_offset is None:
                 self._vis_time_offset = timestamp[0]
@@ -399,30 +401,22 @@ class VisualizationFunctions(AppFunctions):
         stream_processor.subscribe(topic=TOPICS.marker, callback=callback)
 
     #########################
-    # Swipping Plot Functions
+    # Sweeping Plot Functions
     #########################
     @Slot(dict)
     def plot_exg(self, data):
         """
         Plot and update exg data
         """
+        # TODO: This should be a variable set somewhere before this and it shouldn't be set in each iteration.
         self.active_chan = [ch for ch in self.chan_dict.keys() if self.chan_dict[ch] == 1]
         n_new_points = len(data['t'])
-        # n_new_points = len(data['t']) + 1
         idxs = np.arange(self.exg_pointer, self.exg_pointer + n_new_points)
 
         self.exg_plot_data[0].put(idxs, data['t'], mode='wrap')  # replace values with new points
         self.last_t = data['t'][-1]
-        # try:
-        #     self.last_t = self.exg_plot_data[0][idxs[-1]]
-        # except IndexError:
-        #     self.last_t = data['t'][-1]
-        # print()
-        # print(f"{self.last_t=}")
-        # print(f"{t_min=}")
-        # print(f"{self.exg_plot_data[0][idxs[-1]]=}")
 
-        # for i, ch in enumerate(self.exg_plot.keys()):
+        # TODO: This check could cause problems and it is not efficient to do in each loop. It should be obsolete.
         for ch in self.exg_plot_data[1].keys():
             try:
                 d = data[ch]
@@ -433,7 +427,6 @@ class VisualizationFunctions(AppFunctions):
 
         self.exg_pointer += n_new_points
 
-        # if wrap happen -> pointer>length:
         if self.exg_pointer >= len(self.exg_plot_data[0]):
             while self.exg_pointer >= len(self.exg_plot_data[0]):
                 self.exg_pointer -= len(self.exg_plot_data[0])
@@ -441,16 +434,9 @@ class VisualizationFunctions(AppFunctions):
             self.exg_plot_data[0][self.exg_pointer:] += self.get_timeScale()
 
             t_min = self.last_t
-            # t_min = np.nanmin(self.exg_plot_data[0])
             t_max = t_min + self.get_timeScale()
             self.ui.plot_exg.setXRange(t_min, t_max, padding=0.01)
-            # print(f"{t_min=}")
-            # print(f"{t_max=}")
-            # print(f"{np.nanmin(self.exg_plot_data[0])=}")
-            # print(f"{np.nanmax(self.exg_plot_data[0])=}")
-            # print(f"{np.where(self.exg_plot_data[0] - t_min>=0.5)[0]=}")
-            # print()
-            # print()
+
             id_th = np.where(self.exg_plot_data[0] - t_min >= 0.5)[0][0]
             if id_th > 100:
                 for ch in self.exg_plot_data[1].keys():
