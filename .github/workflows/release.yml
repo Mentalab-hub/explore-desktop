@@ -16,11 +16,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python }}
-
       - name: Install non-python dependencies on Ubuntu
         run: |
           sudo apt-get update -yq
@@ -42,30 +37,36 @@ jobs:
           sudo apt-get build-dep -yq qt5-default
           sudo apt-get install -yq libxcb-xinerama0-dev
           sudo apt install x11-apps
-#          curl -fsSL https://raw.githubusercontent.com/mviereck/x11docker/master/x11docker | sudo bash -s -- --update
-      #          # Install tkinter
-#          sudo apt-get install -yq python3-tk
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
 
       - name: install qt and qt-ifw
         run: |
           python -m pip install --upgrade pip
           # install tkinter
           sudo apt-get install -yq python3-tk
+          pip install virtualenv
+          python3 -m venv env
+          source env/bin/activate
           # Install qt installer, qt and qt_ifw
           pip install aqtinstall
-          aqt install-qt linux desktop 5.12.12 
-          aqt install-tool linux desktop tools_ifw
+          aqt install-qt linux desktop 6.3.0 -m all
+          aqt install-tool linux desktop tools_ifw 
+          aqt install-tool linux desktop tools_maintenance
           # Install Pyinstaller
           pip install pyinstaller==4.7
           # Install ExploreGUI
           pip install -e .
           pip list
-          ls 5.12.12/gcc_64/plugins/platforms/
 
       - name: Create installer file
         run: |
           export QT_DEBUG_PLUGINS=1
-          sudo apt-get install -yq --reinstall libxcb-xinerama0
+          #sudo apt-get install -yq --reinstall libxcb-xinerama0
+          source env/bin/activate
           pyinstaller --onedir --console --icon=mentalab ExploreGUI.spec
           mv  -v dist/ExploreGUI/* installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages/com.Mentalab.ExploreGUI/data/
           ./Tools/QtInstallerFramework/4.2/bin/binarycreator -c installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/config/config.xml -p installer/Ubuntu/ExploreGuiInstaller/ExploreGUI/packages --verbose ExploreGUIInstaller.run
