@@ -33,7 +33,7 @@ jobs:
           sudo dpkg -i liblsl-1.15.2-focal_amd64.deb
           sudo apt-get install -yq -f
           # Install tk and tcl
-          sudo apt-get install -yq tcl tk expect
+          sudo apt-get install -yq tcl tk expect xcb
 #          # Install tkinter
 #          sudo apt-get install -yq python3-tk
 
