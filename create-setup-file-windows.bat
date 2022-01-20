@@ -9,7 +9,7 @@
 
 @REM # Conda virtual env
 call conda config --append channels conda-forge
-call conda create -n gui_installer python=3.8.10 -y
+call conda create -n gui_installer python=3.8.10 -y openssl=1.1.1l
 call conda activate gui_installer
 @REM call which python
 call python -m pip install --upgrade pip
