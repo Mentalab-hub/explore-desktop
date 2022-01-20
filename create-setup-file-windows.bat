@@ -19,7 +19,7 @@ call python -m pip install --upgrade pip
 call cd temp
 call pip install aqtinstall
 @REM aqt install-qt linux desktop 6.2.1
-call aqt install-tool linux desktop tools_ifw
+call aqt install-tool windows desktop tools_ifw
 @REM aqt install-tool linux desktop tools_maintenance
 call cd ..
 
