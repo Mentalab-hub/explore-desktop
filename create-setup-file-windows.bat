@@ -16,12 +16,12 @@ call python -m pip install --upgrade pip
 
 @REM Install qt and qt-ifw (TO BE USED IN FUTURE)
 @REM mkdir temp || rm -rfv temp/*
-@REM cd temp
+call cd temp
 @REM pip install aqtinstall
 @REM aqt install-qt linux desktop 6.2.1
-@REM aqt install-tool linux desktop tools_ifw
+call aqt install-tool linux desktop tools_ifw
 @REM aqt install-tool linux desktop tools_maintenance
-@REM cd ..
+call cd ..
 
 @REM Install Pyinstaller
 call pip install pyinstaller==4.7
@@ -46,4 +46,4 @@ call xcopy %exploregui_path%extras\MentalabLogo.ico %exploregui_path%data
 @REM Create installer file
 call set config_path= "installer\ExploreGuiInstaller\ExploreGUI\config\config.xml"
 call set package_path="installer\ExploreGuiInstaller\ExploreGUI\packages"
-call C:\Qt\QtIFW-4.2.0\bin\binarycreator -c %config_path% -p %package_path% --verbose ExploreGUIInstaller.exe
+call %~dp0\temp\Tools\QtInstallerFramework\4.2\bin\binarycreator -c %config_path% -p %package_path% --verbose ExploreGUIInstaller.exe
