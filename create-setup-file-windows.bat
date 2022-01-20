@@ -37,7 +37,7 @@ call md %exploregui_path%data
 call rd /S /Q dist
 
 @REM Create executable files
-call pyinstaller --onedir --console ExploreGUI.spec
+call pyinstaller --onedir --console ExploreGUI.spec --log-level TRACE
 
 @REM Copy files to data dir
 call xcopy /I /E /H /R /Q dist\ExploreGUI %exploregui_path%data\ExploreGUI
