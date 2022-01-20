@@ -11,7 +11,7 @@
 call set PATH=%PATH%;C:\Miniconda\Scripts
 call conda config --append channels conda-forge
 call conda create -n gui_installer python=3.8.10 -y
-call conda activate gui_installer
+call conda.bat activate gui_installer
 call where.exe python
 call conda install openssl=1.1.1l
 @REM call which python
