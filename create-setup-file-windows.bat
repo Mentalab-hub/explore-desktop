@@ -8,6 +8,7 @@
 
 
 @REM # Conda virtual env
+call set PATH=%PATH%;C:\Miniconda\Scripts
 call conda config --append channels conda-forge
 call conda create -n gui_installer python=3.8.10 -y
 call conda activate gui_installer
