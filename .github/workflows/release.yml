@@ -20,8 +20,7 @@ jobs:
         shell: cmd
         run: |
           set PATH=%PATH%;C:\Miniconda\condabin\;C:\Miniconda\
-          conda list
-          ./create-setup-file-windows.bat
+          create-setup-file-windows.bat
 
       - name: upload artifact
         uses: actions/upload-artifact@v2
