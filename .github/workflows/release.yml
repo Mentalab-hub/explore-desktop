@@ -17,11 +17,10 @@ jobs:
           fetch-depth: 0
 
       - name: Setup miniconda path
-        shell: pwsh
-        run: set PATH=%PATH%;C:\Anaconda3;C:\Anaconda3\Scripts\
-
-      - name: check conda
-        run: conda list
+        shell: cmd
+        run: |
+        set PATH=%PATH%;C:\Miniconda;C:\Miniconda\Scripts\
+        conda list
 
 #      - name: Setup miniconda
 #        uses: conda-incubator/setup-miniconda@v2
