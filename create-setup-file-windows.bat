@@ -27,7 +27,7 @@ call cd ..
 call pip install pyinstaller==4.7
 
 @REM Install ExploreGUI
-call pip install -e .
+call pip install .
 
 @REM  Clean required directories
 call dir
