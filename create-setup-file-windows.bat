@@ -26,7 +26,7 @@ call aqt install-tool windows desktop tools_ifw
 call cd ..
 
 @REM Install Pyinstaller
-call pip install pyinstaller==4.7
+call conda install -c conda-forge pyinstaller
 
 @REM Install ExploreGUI
 call pip install .
