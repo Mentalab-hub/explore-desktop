@@ -18,9 +18,7 @@ jobs:
 
       - name: Setup miniconda path
         shell: cmd
-        run: |
-        set PATH=%PATH%;C:\Miniconda;C:\Miniconda\Scripts\
-        conda list
+        run: C:\Miniconda\condabin\conda.bat list
 
 #      - name: Setup miniconda
 #        uses: conda-incubator/setup-miniconda@v2
