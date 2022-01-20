@@ -17,7 +17,7 @@ call python -m pip install --upgrade pip
 @REM Install qt and qt-ifw (TO BE USED IN FUTURE)
 @REM mkdir temp || rm -rfv temp/*
 call cd temp
-@REM pip install aqtinstall
+call pip install aqtinstall
 @REM aqt install-qt linux desktop 6.2.1
 call aqt install-tool linux desktop tools_ifw
 @REM aqt install-tool linux desktop tools_maintenance
@@ -30,6 +30,7 @@ call pip install pyinstaller==4.7
 call pip install -e .
 
 @REM  Clean required directories
+call dir
 call set exploregui_path="installer\ExploreGuiInstaller\ExploreGUI\packages\com.Mentalab.ExploreGUI\"
 call rd /S /Q %exploregui_path%data
 call md %exploregui_path%data
