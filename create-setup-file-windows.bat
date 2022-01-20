@@ -15,7 +15,7 @@ call conda activate gui_installer
 call python -m pip install --upgrade pip
 
 @REM Install qt and qt-ifw (TO BE USED IN FUTURE)
-@REM mkdir temp || rm -rfv temp/*
+call mkdir temp || rm -rfv temp/*
 call cd temp
 call pip install aqtinstall
 @REM aqt install-qt linux desktop 6.2.1
