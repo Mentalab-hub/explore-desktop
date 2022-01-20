@@ -19,7 +19,7 @@ jobs:
       - name: Setup miniconda env
         shell: cmd
         run: |
-          set PATH=%PATH%;C:\Miniconda\condabin\;C:\Miniconda\
+          set PATH=%PATH%;C:\Miniconda\Scripts
           create-setup-file-windows.bat
 
       - name: upload artifact
