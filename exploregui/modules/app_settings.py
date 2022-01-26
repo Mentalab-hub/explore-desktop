@@ -122,7 +122,7 @@ QMessageBox QLabel {
     #     'ch1', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8',
     #     'ch9', 'ch10', 'ch11', 'ch12', 'ch13', 'ch14', 'ch15', 'ch16']
     CHAN_LIST = [f'ch{i}' for i in range(1, 9)]
-    DEFAULT_SCALE = 10 ** 3  # Volt
+    DEFAULT_SCALE = {"value": 10 ** 3, "string": "1 mV"}  # Volt
     BATTERY_N_MOVING_AVERAGE = 60
     V_TH = [10, 5 * 10 ** 3]  # Noise threshold for ECG (microVolt)
     ORN_LIST = [
@@ -155,3 +155,5 @@ QMessageBox QLabel {
         "red": 50,
         "open": 100
     }
+
+    BASELINE_MA_LENGTH = 1.5 * EXG_VIS_SRATE

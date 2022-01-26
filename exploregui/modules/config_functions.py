@@ -139,7 +139,7 @@ class ConfigFunctions(AppFunctions):
 
         if active_chan_int != self.explorer.stream_processor.device_info['adc_mask']:
             if AppFunctions.plotting_filters is not None:
-                self.vis_functions._baseline_corrector["baseline"] = None
+                self.vis_functions._baseline = None
                 self.explorer.stream_processor.remove_filters()
 
             mask = "".join(active_chan)
@@ -158,7 +158,7 @@ class ConfigFunctions(AppFunctions):
             AppFunctions.chan_dict = self.chan_dict
 
             self.vis_functions.offsets = np.arange(1, n_chan.count(1) + 1)[:, np.newaxis].astype(float)
-            self.vis_functions._baseline_corrector["baseline"] = None
+            self.vis_functions._baseline = None
             if self.plotting_filters is not None:
                 self.apply_filters()
             self.init_imp()

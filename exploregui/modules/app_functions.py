@@ -161,8 +161,17 @@ class AppFunctions():
         chan_dict = self.chan_dict
         return chan_dict
 
-    def set_chan_dict(self, value: dict):
-        self.chan_dict = value
+    def set_chan_dict(self, value=None):
+        if value is None:
+            chan = self.explorer.stream_processor.device_info['adc_mask']
+            chan = [i for i in reversed(chan)]
+            self.chan_dict = dict(zip([c.lower() for c in Settings.CHAN_LIST], chan))
+
+        elif value is not None and type(value) == dict:
+            self.chan_dict = value
+
+        else:
+            print("Value must be a dictionary")
 
     def get_exg_plot_data(self):
         exg_plot_data = self.exg_plot_data
