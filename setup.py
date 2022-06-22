@@ -13,7 +13,7 @@ requirements = ['PySide6==6.2.1',
                 'pyqtgraph==0.12.3 ',
                 'mne==0.24.1',
                 'explorepy',
-                'numpy==1.21.4'
+                'numpy==1.22.0'
                 ]
 
 test_requirements = ["pytest==6.2.5",
