@@ -4,10 +4,9 @@ import os
 from copy import deepcopy
 
 import yaml
-from exploredesktop.modules.dialogs import ConvertBinDialog
+from appdirs import user_config_dir
 from PySide6.QtCore import (
     QAbstractTableModel,
-    QEvent,
     QModelIndex,
     QSettings,
     Qt,
@@ -18,7 +17,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QHeaderView,
-    QItemDelegate,
     QLineEdit,
     QMessageBox,
     QStyledItemDelegate
@@ -36,7 +34,6 @@ from exploredesktop.modules import (  # isort: skip
     BaseModel
 )
 from exploredesktop.modules.utils import display_msg, wait_cursor, ELECTRODES_10_20  # isort: skip
-
 
 logger = logging.getLogger("explorepy." + __name__)
 
@@ -57,44 +54,11 @@ class SettingsFrameView(BaseModel):
         # Setup signal connections
         self.signals.dataSettingsChanged.connect(self.disable_apply)
 
-    @Slot()
-    def disable_apply(self, index: QModelIndex) -> None:
-        """Disable apply button based on the names of the channels
-
-        Args:
-            index (QModelIndex): index of the item changed
-        """
-        # Only relevant for Name column, return if item changed is another one
-        if index.column() != 2:
-            return
-
-        # Default values
-        enable = True
-        tooltip = ""
-
-        custom_names = self.ui.table_settings.model().get_list_names()
-        custom_names_alnum = ["".join(e for e in name if e.isalnum()).strip() for name in custom_names]
-
-        # Check for names containing only special characters
-        if "" in custom_names_alnum:
-            enable = False
-            tooltip = "Channel names cannot contain only special characters"
-
-        # Check for repeated names
-        if len(custom_names) != len(set(custom_names)):
-            enable = False
-            tooltip = "Channel names must be unique"
-
-        # Disable button and set tooltip
-        self.ui.btn_apply_settings.setEnabled(enable)
-        # TODO? add tooltip to cells
-        self.ui.btn_apply_settings.setToolTip(tooltip)
-
     def setup_tableview(self) -> None:
         """Configure settings table
         """
         # Add delegates
-        self.ui.table_settings.setItemDelegateForColumn(1, CheckBoxDelegate(None))
+        # self.ui.table_settings.setItemDelegateForColumn(1, CheckBoxDelegate(None))
         self.ui.table_settings.setItemDelegate(_ConfigItemDelegate())
 
         # Resize to fill all horizontal space
@@ -243,26 +207,6 @@ class SettingsFrameView(BaseModel):
             self.signals.restartPlot.emit()
             self.signals.displayDefaultImp.emit()
 
-    def _display_new_settings(self) -> None:
-        """Display popup with new sampling rate and active channels
-        """
-        chan_dict = self.explorer.get_chan_dict_list()
-        act_chan = ", ".join([
-            f'{one_chan_dict["input"]} ({one_chan_dict["name"]})'
-            for one_chan_dict in chan_dict if one_chan_dict["enable"]])
-        msg = (
-            "Device settings have been changed:"
-            f"\nSampling Rate: {self.explorer.sampling_rate}"
-            f"\nActive Channels: {act_chan}"
-        )
-        display_msg(msg_text=msg, popup_type="info")
-
-    def _remove_filters(self) -> None:
-        """Remove filters"""
-        if self.filters.current_filters is not None:
-            self.signals.updateDataAttributes.emit([DataAttributes.BASELINE])
-            self.explorer.stream_processor.remove_filters()
-
     ###
     # Change settings functions
     ###
@@ -347,7 +291,7 @@ class SettingsFrameView(BaseModel):
         Returns:
             list[str]: binary list indicating whether channel is active
         """
-        active_chan = [str(one_chan_dict["enable"]) for one_chan_dict in self.ui.table_settings.model().chan_data]
+        active_chan = [str(int(one_chan_dict["enable"])) for one_chan_dict in self.ui.table_settings.model().chan_data]
         # active_chan = list(reversed(active_chan))
         return active_chan
 
@@ -399,6 +343,26 @@ class SettingsFrameView(BaseModel):
             saved = False
         return saved
 
+    def _display_new_settings(self) -> None:
+        """Display popup with new sampling rate and active channels
+        """
+        chan_dict = self.explorer.get_chan_dict_list()
+        act_chan = ", ".join([
+            f'{one_chan_dict["input"]} ({one_chan_dict["name"]})'
+            for one_chan_dict in chan_dict if one_chan_dict["enable"]])
+        msg = (
+            "Device settings have been changed:"
+            f"\nSampling Rate: {self.explorer.sampling_rate}"
+            f"\nActive Channels: {act_chan}"
+        )
+        display_msg(msg_text=msg, popup_type="info")
+
+    def _remove_filters(self) -> None:
+        """Remove filters"""
+        if self.filters.current_filters is not None:
+            self.signals.updateDataAttributes.emit([DataAttributes.BASELINE])
+            self.explorer.stream_processor.remove_filters()
+
     ###
     # Vis feedback slots
     ###
@@ -410,6 +374,38 @@ class SettingsFrameView(BaseModel):
             self.ui.lbl_sr_warning.show()
         else:
             self.ui.lbl_sr_warning.hide()
+
+    @Slot()
+    def disable_apply(self, index: QModelIndex) -> None:
+        """Disable apply button based on the names of the channels
+
+        Args:
+            index (QModelIndex): index of the item changed
+        """
+        # Only relevant for Name column, return if item changed is another one
+        if index.column() != 2:
+            return
+
+        # Default values
+        enable = True
+        tooltip = ""
+
+        custom_names = self.ui.table_settings.model().get_list_names()
+        custom_names_alnum = ["".join(e for e in name if e.isalnum()).strip() for name in custom_names]
+
+        # Check for names containing only special characters
+        if "" in custom_names_alnum:
+            enable = False
+            tooltip = "Channel names cannot contain only special characters"
+
+        # Check for repeated names
+        if len(custom_names) != len(set(custom_names)):
+            enable = False
+            tooltip = "Channel names must be unique"
+
+        # Disable button and set tooltip
+        self.ui.btn_apply_settings.setEnabled(enable)
+        self.ui.btn_apply_settings.setToolTip(tooltip)
 
     def enable_settings(self, enable=True) -> None:
         """Disable or enable device settings widgets
@@ -485,7 +481,9 @@ class SettingsFrameView(BaseModel):
 
         self.ui.table_settings.viewport().update()
 
-    # TODO create a class for menubar and move there
+    ###
+    # Import/Export settings
+    ###
     def export_settings(self):
         """
         Open a dialog to select folder to be saved
@@ -521,17 +519,27 @@ class SettingsFrameView(BaseModel):
     def import_settings(self):
         """Import settings
         """
-        settings_dict = self._read_settings_file()
+        settings_dict = self._open_settings_file()
         if settings_dict is None:
             return
         if not self._verify_settings(settings_dict):
             return
 
+        self._apply_imported_settings(settings_dict)
+
+    def _apply_imported_settings(self, settings_dict: dict) -> None:
+        """Apply imported settings to explorepy
+
+        Args:
+            settings_dict (dict): dictionary containing new settings
+        """
+        if 'channel_name' not in settings_dict.keys():
+            settings_dict['channel_name'] = [f"ch{i + 1}" for i in range(len(settings_dict['software_mask']))]
         new_dict_list = [
             {
-                'input': f'ch{idx + 1}', 'enable': val[0],
+                'input': f'ch{idx + 1}', 'enable': bool(val[0]),
                 'name': val[1], 'type': 'EEG'}
-            for idx, val in enumerate(zip(settings_dict['software_mask'], settings_dict['channel_name']))]
+            for idx, val in enumerate(zip(reversed(settings_dict['software_mask']), settings_dict['channel_name']))]
         self.ui.table_settings.setModel(ConfigTableModel(new_dict_list))
         self.ui.value_sampling_rate.setCurrentText(str(int(settings_dict['sampling_rate'])))
         self.change_settings()
@@ -560,7 +568,7 @@ class SettingsFrameView(BaseModel):
 
         return settings_ok
 
-    def _read_settings_file(self) -> dict:
+    def _open_settings_file(self) -> dict:
         """Open settings yaml file
 
         Returns:
@@ -585,75 +593,33 @@ class SettingsFrameView(BaseModel):
         if path != os.path.dirname(file_path):
             settings.setValue("last_settings_import_folder", os.path.dirname(file_path))
 
+        settings_dict = self._read_settings_file(file_path)
+        return settings_dict
+
+    @staticmethod
+    def _read_settings_file(file_path: str) -> dict:
+        """Read yaml settings file
+
+        Args:
+            file_path (str): path to the yaml file
+
+        Returns:
+            dict: dictionary with the settings included in the yaml file
+        """
         stream = open(file_path, 'r')
         settings_dict = yaml.load(stream, Loader=yaml.SafeLoader)
         return settings_dict
 
-    def convert_bin(self):
-        dialog = ConvertBinDialog()
-        data = dialog.exec()
-        if data is False:
-            return
-        self.explorer.convert_bin(
-            bin_file=data['bin_path'],
-            out_dir=data['dst_folder'],
-            file_type=data['file_type'],
-            out_dir_is_full=True
-        )
-        display_msg("Conversion finished", popup_type="info")
-
-
-class CheckBoxDelegate(QItemDelegate):
-    """
-    A delegate that places a fully functioning QCheckBox cell of the column to which it's applied.
-    """
-    def __init__(self, parent):
-        QItemDelegate.__init__(self, parent)
-
-    # pylint: disable=invalid-name
-    def createEditor(self, parent, option, index):
-        """
-        Important, otherwise an editor is created if the user clicks in this cell.
-        """
-        return None
-
-    def paint(self, painter, option, index):
-        """
-        Paint a checkbox without the label.
-        """
-        value = int(index.data())
-        if value == 0:
-            value = Qt.Unchecked
-        else:
-            value = Qt.Checked
-        self.drawCheck(painter, option, option.rect, value)
-
-    # pylint: disable=invalid-name
-    def editorEvent(self, event, model, option, index):
-        """
-        Change the data in the model and the state of the checkbox
-        if the user presses the left mousebutton and this cell is editable. Otherwise do nothing.
-        """
-        if not int(index.flags() & Qt.ItemIsEditable) > 0:
-            return False
-
-        if event.type() == QEvent.MouseButtonRelease and event.button() == Qt.LeftButton:
-            # Change the checkbox-state
-            self.setModelData(None, model, index)
-            return True
-
-        return False
-
-    # pylint: disable=invalid-name
-    def setModelData(self, editor, model, index):
-        """
-        Set new data in the model
-        """
-        model.setData(index, 1 if int(index.data()) == 0 else 0, Qt.EditRole)
+    def import_last_session_settings(self) -> None:
+        """Import settings from last session"""
+        data_path = user_config_dir(appname="Mentalab", appauthor="explorepy", version='archive')
+        file_path = os.path.join(data_path, self.explorer.device_name + ".yaml")
+        settings_dict = self._read_settings_file(file_path)
+        self._apply_imported_settings(settings_dict)
 
 
 class _ConfigItemDelegate(QStyledItemDelegate):
-    ''' Combobox item editor
+    '''Combobox item editor
     '''
 
     # pylint: disable=invalid-name
@@ -749,16 +715,23 @@ class ConfigTableModel(QAbstractTableModel, BaseModel):
         value = self._getitem(index.row(), index.column())
 
         if (role == Qt.DisplayRole) or (role == Qt.EditRole):
+            if self.columns[index.column()]['property'] == 'enable':
+                value = True if value == 2 else False
+            return value
+
+        elif role == Qt.CheckStateRole and self.columns[index.column()]['property'] == 'enable':
+            # print(f"data - {value=}")
             return value
 
         if role == Qt.BackgroundRole:
             if index.column() == 2 and (
                 "".join(
-                    e for e in value if e.isalnum()).strip() == "" or self.get_list_names().count(value) > 1):
+                    e for e in value if e.isalnum()).strip() == "" or self.get_list_names(full=True).count(value) > 1):
                 return QBrush("#fa5c62")
 
         if role == Qt.TextAlignmentRole:
             return int(Qt.AlignHCenter | Qt.AlignVCenter)
+        return None
 
     def get_list_names(self, full=False) -> list:
         """Return list of custom names
@@ -769,7 +742,7 @@ class ConfigTableModel(QAbstractTableModel, BaseModel):
 
     def get_chan_mask(self) -> list:
         """Return channel mask as list"""
-        return [d["enable"] for d in self.chan_data]
+        return [int(d["enable"]) for d in self.chan_data]
 
     # pylint: disable=invalid-name
     def rowCount(self, index) -> int:
@@ -824,19 +797,15 @@ class ConfigTableModel(QAbstractTableModel, BaseModel):
     def flags(self, index):
         """Abstract method from QAbstactTableModel
         """
+        fl = QAbstractTableModel.flags(self, index)
+        if self.columns[index.column()]['editor'] == "checkbox":
+            fl |= Qt.ItemIsUserCheckable
+            # fl |= Qt.ItemIsEditable | Qt.ItemIsUserCheckable
         if not index.isValid():
             return Qt.ItemIsEnabled
         if not self.columns[index.column()]['edit']:
             return Qt.NoItemFlags
-        if self.columns[index.column()]['header'] == "Enable":
-            n_active = sum(item["enable"] for item in self.chan_data)
-            if n_active == 1:
-                ch_active = next(item for item in self.chan_data if item["enable"] == 1)["input"]
-                row_active = int(ch_active.replace("ch", "")) - 1
-                if index.column() == 1 and index.row() == row_active:
-                    return Qt.NoItemFlags
-
-        return QAbstractTableModel.flags(self, index) | Qt.ItemIsEditable
+        return fl | Qt.ItemIsEditable
 
     def _setitem(self, row: int, column: int, value: str) -> bool:
         """Set property item based on table row and column
@@ -851,13 +820,18 @@ class ConfigTableModel(QAbstractTableModel, BaseModel):
         """
         if (row >= len(self.chan_data)) or (column >= len(self.columns)):
             return False
+
         # get channel properties
         property = self.chan_data[row]
+
         # get property name from column description
         property_name = self.columns[column]['property']
+
         # set channel property
         if property_name == 'enable':
+            value = True if value == 2 else False
             property["enable"] = value
+            # print(f"set_item - {value=}")
             return True
 
         if property_name == 'name':
@@ -892,8 +866,10 @@ class ConfigTableModel(QAbstractTableModel, BaseModel):
         # get property name from column description
         property_name = self.columns[column]['property']
         # get property value
-        if property_name in ['input', 'enable', 'name', 'type']:
+        if property_name in ['input', 'name', 'type']:
             d = str(property[property_name])
+        elif property_name == 'enable':
+            d = 2 if property[property_name] is True else 0
         else:
             d = None
         return d
@@ -902,14 +878,12 @@ class ConfigTableModel(QAbstractTableModel, BaseModel):
     def setData(self, index, value, role):
         """Abstract method from QAbstactTableModel to set cell data based on role
         """
-        if index.isValid():
-            if role == Qt.EditRole:
-                if not self._setitem(index.row(), index.column(), value):
-                    return False
-                self.signals.dataSettingsChanged.emit(index)
-                return True
-            elif role == Qt.CheckStateRole:
-                if not self._setitem(index.row(), index.column(), Qt.QVariant(value == Qt.Checked)):
-                    return False
-                return True
+        if not index.isValid():
+            return False
+
+        if role == Qt.CheckStateRole or role == Qt.EditRole:
+            if not self._setitem(index.row(), index.column(), value):
+                return False
+            self.signals.dataSettingsChanged.emit(index)
+            return True
         return False

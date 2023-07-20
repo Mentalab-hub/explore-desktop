@@ -18,18 +18,9 @@ from explorepy.tools import bt_scan
 
 
 from exploredesktop.modules.app_settings import Settings  # isort: skip
-# from exploredesktop.modules.utils import ELECTRODES_10_20  # isort: skip
 
 
 logger = logging.getLogger("explorepy." + __name__)
-
-# write below idx of channels to display, e.g. [0,1,2,3,4,5,6,7] for first 8 chan
-IDX_CHAN_TO_DISPLAY = [0, 1, 2, 3, 4, 5, 6, 7]
-# IDX_CHAN_TO_DISPLAY = [i for i in range(32)]
-# IDX_CHAN_TO_DISPLAY = [0, 1, 2, 3, 4, 5, 6, 7]
-# IDX_CHAN_TO_DISPLAY = [0]
-# write max number of channels
-N_CHAN = 32
 
 
 class ExploreInterface(Explore):
@@ -41,6 +32,8 @@ class ExploreInterface(Explore):
         self.chan_dict_list = []
         self.chan_mask = "1111"
         self.settings = None
+        self.record_filename = ""
+        self.filters = {}
 
     @property
     def sampling_rate(self) -> Optional[int]:
@@ -55,9 +48,9 @@ class ExploreInterface(Explore):
     def n_active_chan(self) -> Optional[int]:
         """Returns number of active channels"""
         if self.is_connected:
-            # TODO uncomment when adc mask is implemented
+            if isinstance(self.chan_mask, str):
+                return sum([int(i) for i in self.chan_mask])
             return sum(self.chan_mask)
-            # return sum(self.stream_processor.device_info['adc_mask'])
 
         logger.debug("Device is not connected but the number of active channels method is called.")
         return None
@@ -76,18 +69,19 @@ class ExploreInterface(Explore):
     def scan_devices() -> List[namedtuple]:
         """This function searches for nearby bluetooth devices and returns a list of advertising Explore devices.
 
-    Note:
-        In Windows, this function returns all the paired devices and unpaired advertising devices. The 'is_paired'
-        attribute shows if the device is paired. If a device is paired, it will be in the returned list regardless if
-        it is currently advertising or not.
+        Note:
+            In Windows, this function returns all the paired devices and unpaired advertising devices. The 'is_paired'
+            attribute shows if the device is paired. If a device is paired,
+            it will be in the returned list regardless if it is currently advertising or not.
 
-    Returns:
-            list of nearby devices
-    """
+        Returns:
+                list of nearby devices
+        """
         return bt_scan()
 
     def connect(self, device_name: str) -> bool:
         """
+        Connect to explore device
 
         Args:
             device_name: Device name ("Explore_XXXX")
@@ -95,9 +89,9 @@ class ExploreInterface(Explore):
         Returns:
             True if successful, False otherwise
         """
+        # Connect to the device
         try:
             super().connect(device_name=device_name)
-
         except ConnectionAbortedError as error:
             logger.debug("Could not connect! %s", str(error))
             return False
@@ -108,12 +102,13 @@ class ExploreInterface(Explore):
             time.sleep(.05)
         self.unsubscribe(topic=TOPICS.raw_ExG, callback=self._set_n_chan)
 
-        # Set channel status and channel mask and default chan names
+        # Set channel mask and default chan names
         self.settings = SettingsManager(device_name)
         self.set_chan_mask()
         self.set_chan_dict_list()
         self.settings.settings_dict[self.settings.channel_name_key] = [
             f"ch{i + 1}" for i in range(self.device_chan)]
+        # Activate all channels. Needed because of difference between hardware and software adc mask
         if self.device_chan in [4, 8] and sum(self.stream_processor.device_info['adc_mask']) != self.device_chan:
             self.set_channels("1" * self.device_chan)
 
@@ -124,11 +119,15 @@ class ExploreInterface(Explore):
         """
         self.device_chan = None
         self.chan_dict_list = []
+        # Save current settings before disconnecting
+        if self.device_name is not None:
+            SettingsManager(self.device_name).save_current_session()
         return super().disconnect()
 
     def set_chan_mask(self, mask=None):
         """Set channel mask.
         """
+        # Initialize mask by activating all channels
         if mask is None:
             self.chan_mask = [1] * self.device_chan
             self.settings.set_adc_mask(list(reversed(self.chan_mask)))
@@ -142,28 +141,29 @@ class ExploreInterface(Explore):
     def set_chan_dict_list(self, new_dict=None):
         """Set the channel status dictionary i.e. whether channels are active or inactive
         """
-        if self.is_connected:
-            # TODO uncomment when adc mask is implemented
-            # chan_mask = list(reversed(self.stream_processor.device_info['adc_mask']))
+        if self.is_connected is False:
+            return
 
-            if new_dict is None:
-                custom_names = [f"ch{i}" for i in range(1, self.device_chan + 1)]
-                # NOTE Change line below to hardcode different channel names
-                # custom_names = ELECTRODES_10_20 + [
-                #     f"ch{i}" for i in range(len(ELECTRODES_10_20) + 1, self.device_chan + 1)]
-                signal_types = ["EEG"] * self.device_chan
-            else:
-                custom_names = [d["name"] for d in new_dict]
-                signal_types = [d["type"] for d in new_dict]
+        # Initialize dict with default values
+        if new_dict is None:
+            custom_names = [f"ch{i}" for i in range(1, self.device_chan + 1)]
+            # NOTE Change line below to hardcode different channel names
+            # custom_names = ELECTRODES_10_20 + [
+            #     f"ch{i}" for i in range(len(ELECTRODES_10_20) + 1, self.device_chan + 1)]
+            signal_types = ["EEG"] * self.device_chan
+        else:
+            custom_names = [d["name"] for d in new_dict]
+            signal_types = [d["type"] for d in new_dict]
 
-            self.chan_dict_list = [
-                {
-                    "input": ch, "enable": active, "name": name, "type": sig_type
-                } for ch, active, name, sig_type in zip(
-                    [c.lower() for c in Settings.CHAN_LIST], self.chan_mask, custom_names, signal_types)
-            ]
+        self.chan_dict_list = [
+            {
+                "input": ch, "enable": bool(active), "name": name, "type": sig_type
+            } for ch, active, name, sig_type in zip(
+                [c.lower() for c in Settings.CHAN_LIST], self.chan_mask, custom_names, signal_types)
+        ]
 
-            self.chan_dict_list = self.chan_dict_list[:self.device_chan]
+        # Make sure that the list has the same length as the number of channels
+        self.chan_dict_list = self.chan_dict_list[:self.device_chan]
 
     def get_chan_dict_list(self) -> dict:
         """Retrun channel status dictionary
@@ -177,13 +177,19 @@ class ExploreInterface(Explore):
             packet: EEG packet
         """
         exg_fs = self.stream_processor.device_info['sampling_rate']
+
+        # look at board ID to identify 16 chan device
+        if 'board_id' in self.stream_processor.device_info.keys() and \
+                self.stream_processor.device_info['board_id'] == 'PCB_305_801_XXX':
+            self.device_chan = 16
+            return
+
+        # look at number of samples in packet to identify 4, 8 and 32 chan devices
         timestamp, _ = packet.get_data(exg_fs)
         if timestamp.shape[0] == 33:
             self.device_chan = 4
-        # TODO change to 5 when packet number changes
         elif timestamp.shape[0] == 4:
             self.device_chan = 32
-        # TODO verify 16
         elif timestamp.shape[0] == 16:
             self.device_chan = 8
 
@@ -213,7 +219,10 @@ class ExploreInterface(Explore):
 
     # pylint: disable=arguments-differ
     def measure_imp(self, imp_callback: Callable) -> bool:
-        """Activate impedance measurement mode and subscribe to impedance topic"""
+        """Activate impedance measurement mode and subscribe to impedance topic
+
+        Returns:
+            True if successful, False otherwise"""
         try:
             self.stream_processor.imp_initialize(notch_freq=50)
         except ConnectionError:
@@ -223,7 +232,11 @@ class ExploreInterface(Explore):
         return True
 
     def disable_imp(self, imp_callback: Callable) -> bool:
-        """Disable impedance measurement mode and unsubscribe from impedance topic"""
+        """Disable impedance measurement mode and unsubscribe from impedance topic
+
+        Returns:
+            True if successful, False otherwise
+        """
         self.unsubscribe(callback=imp_callback, topic=TOPICS.imp)
         if self.stream_processor.disable_imp():
             return True
@@ -231,9 +244,14 @@ class ExploreInterface(Explore):
         logger.warning("Failed to disable impedance measurement.")
         return False
 
-    # TODO should be prop setter
-    def set_sampling_rate(self, sampling_rate: int) -> Optional[bool]:
-        """Change the sampling rate of the device"""
+    # TODO should be property setter
+    def set_sampling_rate(self, sampling_rate: int) -> bool:
+        """Change the sampling rate of the device
+
+        Returns:
+            True if successful, False otherwise
+        """
+        # If new sampling rate is the same as the current one, do not change
         if sampling_rate == self.sampling_rate:
             return False
         try:
@@ -275,6 +293,7 @@ class ExploreInterface(Explore):
 
         return min_lc_freq, max_hc_freq
 
-    def get_settings(self):
+    def get_settings(self) -> None:
+        """Get current device settings from settings manager
+        """
         self.settings.load_current_settings()
-        print(f"{self.settings.settings_dict=}")

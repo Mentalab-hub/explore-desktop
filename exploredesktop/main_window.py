@@ -1,22 +1,16 @@
 """Main Application"""
 import logging
 import os
-import shutil
 import sys
 from enum import Enum
 from typing import Union
 
 import PySide6
-# from exploredesktop.modules.ui.ui_main_window_redisign import Ui_MainWindow
-from exploredesktop.modules.ui.ui_ui_main_window_redisign_menubar import (
-    Ui_MainWindow
-)
 from explorepy.log_config import (
     read_config,
     write_config
 )
 from explorepy.stream_processor import TOPICS
-from explorepy.tools import generate_eeglab_dataset
 from PySide6.QtCore import (
     QEasingCurve,
     QEvent,
@@ -30,7 +24,6 @@ from PySide6.QtGui import (
     QKeySequence
 )
 from PySide6.QtWidgets import (
-    QFileDialog,
     QGraphicsDropShadowEffect,
     QMainWindow,
     QMessageBox,
@@ -43,15 +36,13 @@ from exploredesktop.modules import (  # isort:skip
     BaseModel,
     GUISettings,
     Stylesheets,
-    # this import will replace the Ui_MainWindow from window_redisign in the future
-    # Ui_MainWindow
+    Ui_MainWindow
 )
 from exploredesktop.modules.app_settings import (  # isort:skip
     ConnectionStatus,
     DataAttributes,
     EnvVariables,
-    Messages,
-    VisModes
+    Messages
 )
 from exploredesktop.modules.bt_module import BTFrameView  # isort:skip
 from exploredesktop.modules.exg_module import ExGPlot  # isort:skip
@@ -60,6 +51,7 @@ from exploredesktop.modules.filters_module import Filters  # isort:skip
 from exploredesktop.modules.footer_module import FooterFrameView  # isort:skip
 from exploredesktop.modules.imp_module import ImpFrameView  # isort:skip
 from exploredesktop.modules.lsl_module import IntegrationFrameView  # isort:skip
+from exploredesktop.modules.menubar_module import MenuBarActions   # isort:skip
 from exploredesktop.modules.mkr_module import MarkerPlot  # isort:skip
 from exploredesktop.modules.orn_module import ORNPlot  # isort:skip
 from exploredesktop.modules.recording_module import RecordFunctions  # isort:skip
@@ -126,12 +118,6 @@ class MainWindow(QMainWindow, BaseModel):
 
         # HOME PAGE
         self.ui.cb_permission.stateChanged.connect(self.set_permissions)
-        self.ui.btn_import_edf.clicked.connect(self.select_edf_file)
-        self.ui.btn_generate_bdf.setEnabled(False)
-        self.ui.btn_generate_bdf.clicked.connect(self.export_eeglab_dataset)
-        self.ui.le_import_edf.textChanged.connect(
-            lambda: self.ui.btn_generate_bdf.setEnabled(self.ui.le_import_edf.text() != "")
-        )
 
         # IMPEDANCE PAGE
         self.imp_frame = ImpFrameView(self.ui)
@@ -196,6 +182,9 @@ class MainWindow(QMainWindow, BaseModel):
         self._stop_recording()
         self._stop_impedance()
         self._stop_lsl()
+        # TODO uncomment after proper test of external LSL markers and threading
+        # known issue: thread not stopped on close
+        # self.mkr_plot.model.stop_lsl_marker_thread()
 
     def _stop_lsl(self) -> None:
         """Stop lsl if active
@@ -301,6 +290,7 @@ class MainWindow(QMainWindow, BaseModel):
     def _setup_menubar(self) -> None:
         """Setup menubar actions
         """
+        self.menubar_actions = MenuBarActions()
         self.ui.actionNew.triggered.connect(lambda: print("new clicked"))
         # Exit action
         self.ui.actionExit.triggered.connect(self.close)
@@ -313,40 +303,52 @@ class MainWindow(QMainWindow, BaseModel):
         self.ui.actionBIN_data.setVisible(False)
         self.ui.actionEDF_data.setVisible(False)
         self.ui.actionEDF_data.setVisible(False)
-        self.ui.actionLast_Session_Settings.setVisible(False)
 
         self.ui.actionNew.setVisible(False)
 
         # Disable actions requiring connection with explorepy
         self._enable_menubar(False)
-        # Metadata actions
+        self.ui.actionRecorded_visualization.setEnabled(False)
+
+        # File actions
         self.ui.actionMetadata_import.triggered.connect(self.settings_frame.import_settings)
         self.ui.actionMetadata_export.triggered.connect(self.settings_frame.export_settings)
-        self.ui.actionConvert.triggered.connect(self.settings_frame.convert_bin)
-        self.ui.actionEEGLAB_Dataset.triggered.connect(self.export_eeglab_dataset)
+        self.ui.actionLast_Session_Settings.triggered.connect(self.settings_frame.import_last_session_settings)
+        self.ui.actionConvert.triggered.connect(self.menubar_actions.convert_bin)
+        self.ui.actionEEGLAB_Dataset.triggered.connect(self.menubar_actions.export_eeglab_dataset)
+        self.ui.actionData_Repair.triggered.connect(self.menubar_actions.repair_data)
 
+        # Help actions
+        self.ui.actionDocumentation.triggered.connect(self.menubar_actions.launch_wiki)
+
+        # Tools actions
+        self.ui.actionRecorded_visualization.triggered.connect(self.menubar_actions.recorded_visualization)
+
+        # NOTE: uncomment below if implementing custom full/scroll view feature
         # View actions
         # self.ui.actionFull_View.triggered.connect(lambda: self.exg_plot.model.change_vis_mode(VisModes.FULL))
         # self.ui.actionScroll_View.triggered.connect(lambda: self.exg_plot.model.change_vis_mode(VisModes.SCROLL))
-        # TODO implement below
-        # self.ui.actionLast_Session_Settings.triggered.connect(self.settings_frame.import_last_session_settings)
 
-        from PySide6.QtGui import QActionGroup
-        view_group = QActionGroup(self)
-        view_group.setExclusive(True)
+        # from PySide6.QtGui import QActionGroup
+        # view_group = QActionGroup(self)
+        # view_group.setExclusive(True)
 
-        actionFullView = view_group.addAction("Full View AG")
-        actionFullView.setCheckable(True)
-        actionScrollView = view_group.addAction("Scroll View AG")
-        actionScrollView.setCheckable(True)
-        actionScrollView.setChecked(True)
+        # actionFullView = view_group.addAction("Full View AG")
+        # actionFullView.setCheckable(True)
+        # actionScrollView = view_group.addAction("Scroll View AG")
+        # actionScrollView.setCheckable(True)
+        # actionScrollView.setChecked(True)
 
-        self.ui.menuVisualization.addActions(view_group.actions())
+        # self.ui.menuVisualization.addActions(view_group.actions())
 
-        actionFullView.triggered.connect(lambda: self.exg_plot.model.change_vis_mode(VisModes.FULL))
-        actionFullView.triggered.connect(self._init_plots)
-        actionScrollView.triggered.connect(lambda: self.exg_plot.model.change_vis_mode(VisModes.SCROLL))
-        actionScrollView.triggered.connect(self._init_plots)
+        # actionFullView.triggered.connect(lambda: self.exg_plot.model.change_vis_mode(VisModes.FULL))
+        # actionFullView.triggered.connect(self._init_plots)
+        # actionScrollView.triggered.connect(lambda: self.exg_plot.model.change_vis_mode(VisModes.SCROLL))
+        # actionScrollView.triggered.connect(self._init_plots)
+
+        self.ui.actionReceive_LSL_Markers.triggered.connect(self.mkr_plot.model.enable_external_markers)
+        # self.ui.actionReceive_LSL_Markers.setVisible(True)
+        # self.ui.actionReceive_LSL_Markers.setChecked(False)
 
     def _init_plots(self) -> None:
         """Initialize plots"""
@@ -414,24 +416,18 @@ class MainWindow(QMainWindow, BaseModel):
         bold_font.setBold(True)
         self.ui.ft_label_device_3.setFont(bold_font)
         self.ui.ft_label_device_3.setStyleSheet("font-weight: bold")
+        self.ui.menuBar.setStyleSheet("font: 10pt")
 
         # Hide unnecessary labels
-        # TODO: review in QtCreator if labels are needed in the future or can be deleted
-        # TODO check if sethidden can be set from qtCreator
-
-        # self.ui.label_3.setHidden(self.file_names is None)
-
-        # plotting page
-        self.ui.label_3.setHidden(True)
-        self.ui.label_7.setHidden(True)
-
         # settings page
         self.ui.label_warning_disabled.setHidden(True)
         self.ui.lbl_sr_warning.hide()
         self.ui.btn_calibrate.setHidden(True)
+
         # connect page
         self.ui.lbl_wdws_warning.hide()
         # self.ui.lbl_bt_instructions.hide()
+
         # integration page
         # TODO: decide if we want to enable duration
         self.ui.lsl_duration_value.hide()
@@ -554,9 +550,8 @@ class MainWindow(QMainWindow, BaseModel):
 
             if not self.is_streaming and filt:
                 self._subscribe_callbacks()
-                # TODO
-                # self.update_heart_rate()
                 self.is_streaming = True
+                self.mkr_plot.model.start_lsl_marker_thread()
 
         # Move to page
         self.ui.stackedWidget.setCurrentWidget(btn_page_map[btn_name])
@@ -713,6 +708,8 @@ class MainWindow(QMainWindow, BaseModel):
         """
         QThreadPool().globalInstance().waitForDone()
         self.stop_processes()
+        if self.explorer.device_name is not None:
+            self.explorer.disconnect()
         return super().closeEvent(event)
 
     def set_permissions(self) -> None:
@@ -735,70 +732,6 @@ class MainWindow(QMainWindow, BaseModel):
             self.ui.cb_permission.setChecked(config)
             exist = True
         return exist
-
-    # NOTE: will move this to appropiate section later
-    def export_eeglab_dataset(self):
-        """Export eeglab dataset
-        """
-        folder_name = self.select_edf_file()
-        print(f"{folder_name=}")
-        if folder_name in [False, '']:
-            return
-
-        if not os.path.isdir(folder_name):
-            display_msg("Directory does not exist. Please select an existing folder")
-            return
-
-        folder_bdfs = os.path.join(folder_name, "bdf")
-        if not os.path.isdir(folder_bdfs):
-            os.mkdir(folder_bdfs)
-            logger.info("Creating folder %s to store bdf files" % folder_bdfs)
-
-        folder_datasets = os.path.join(folder_name, "datasets")
-        if not os.path.isdir(folder_datasets):
-            os.mkdir(folder_datasets)
-            logger.info("Creating folder %s to store dataset files" % folder_datasets)
-
-        n_files = 0
-        for file in os.listdir(folder_name):
-            file_path = os.path.join(folder_name, file)
-            if file_path.endswith(".edf") and os.path.isfile(file_path):
-                bdf_file = os.path.splitext(file)[0] + ".bdf"
-                dataset_file = os.path.splitext(file)[0] + ".set"
-                bdf_path = os.path.join(folder_bdfs, bdf_file)
-                dataset_path = os.path.join(folder_datasets, dataset_file)
-                shutil.copy2(file_path, bdf_path)
-                generate_eeglab_dataset(bdf_path, dataset_path)
-                n_files += 1
-            elif file_path.endswith(".bdf") and os.path.isfile(file_path):
-                dataset_file = os.path.splitext(file)[0] + ".set"
-                dataset_path = os.path.join(folder_datasets, dataset_file)
-                generate_eeglab_dataset(file_path, dataset_path)
-                n_files += 1
-
-        if len(os.listdir(folder_bdfs)) == 0:
-            os.rmdir(folder_bdfs)
-        # folder_bdfs = os.path.dirname(folder_name)
-        folder_datasets = folder_datasets.replace("/", "\\")
-        msg = f"{n_files} datasets exported in folder {folder_datasets}"
-        logger.info(msg)
-        display_msg(msg, popup_type="info")
-
-    def select_edf_file(self):
-        """
-        Open a dialog to select file name to be saved
-        """
-        # TODO get path from last used directory
-
-        dialog = QFileDialog()
-        file_path = dialog.getExistingDirectory(
-            self,
-            "Choose Directory containing EDF/BDF files",
-            "",
-            QFileDialog.ShowDirsOnly)
-
-        return file_path
-        # self.ui.le_import_edf.setText(file_path)
 
     def changeEvent(self, event: PySide6.QtCore.QEvent) -> None:
         if event.type() == QEvent.WindowStateChange:

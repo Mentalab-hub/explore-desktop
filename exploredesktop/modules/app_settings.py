@@ -93,6 +93,7 @@ class QSettingsKeys(BaseEnum):
     BIN_FOLDER = "last_bin_folder"
     BIN_EXPORT = "last_bin_export"
     RECORD_FOLDER = "last_record_folder"
+    REPAIR_FOLDER = "last_repair_folder"
 
 
 class Stylesheets():
@@ -248,7 +249,7 @@ class Settings():
     V_TH = [10, 5 * 10 ** 3]  # Noise threshold for ECG (microVolt)
 
     SCALE_MENU = {
-        "1 uV": 0, "5 uV": -0.66667, "10 uV": -1, "100 uV": -2,
+        "1 uV": 0, "5 uV": -0.66667, "10 uV": -1, "50 uV": -1.66667, "100 uV": -2,
         "200 uV": -2.33333, "500 uV": -2.66667, "1 mV": -3,
         "5 mV": -3.66667, "10 mV": -4, "100 mV": -5}
 
@@ -287,6 +288,7 @@ class Messages():
     WARNING_PAIRED_DEV_WINDOWS = "Note: Listed paired devices might not be advertising"
     INVALID_EXPLORE_NAME = "Please select a device or provide a valid name (Explore_XXXX or XXXX) before connecting."
     WINDOWS_PAIR_INSTRUCTIONS = "Follow Windows' instructions to pair your device."
+    CONNECTION_REFUSED = "Please unpair Explore device manually or use a Bluetooth dongle"
 
     #########################
     # config functions

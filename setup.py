@@ -13,8 +13,8 @@ requirements = ['PySide6==6.2.1',
                 'pyqtgraph==0.12.3 ',
                 'mne==0.24.1',
                 'explorepy',
-                'numpy==1.21.4',
                 'scipy==1.10.0'
+                'numpy>= 1.22'
                 ]
 
 test_requirements = ["pytest==6.2.5",
@@ -44,7 +44,7 @@ setup(
     test_suite='tests',
     extras_require=extras,
     url='https://github.com/Mentalab-hub/explore-desktop',
-    version='0.5.0',
+    version='0.7.0',
     zip_safe=False,
     entry_points={'console_scripts': ['exploredesktop = exploredesktop.main:main']},
 )

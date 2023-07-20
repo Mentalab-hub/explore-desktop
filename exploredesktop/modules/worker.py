@@ -38,16 +38,24 @@ class Worker(QRunnable):
         self.args = args
         self.kwargs = kwargs
         self.signals = WorkerSignals()
+        self._running = True
 
     def run(self) -> None:
         """Initialise the runner function with passed args, kwargs"""
         try:
-            result = self.funct(*self.args, **self.kwargs)
+            if self._running:
+                result = self.funct(*self.args, **self.kwargs)
+            self.signals.finished.emit()
         # pylint: disable=bare-except
         except:  # noqa: E722
             exctype, value = sys.exc_info()[:2]
             self.signals.error.emit((exctype, value, traceback.format_exc()))
+            logger.debug(f"Error in thread {exctype}: {value}")
         else:
             self.signals.result.emit(result)  # Returns the result of the processing
         finally:
             self.signals.finished.emit()  # Done
+
+    def stop(self):
+        """Stop the execution of the runner function"""
+        self._running = False

@@ -433,14 +433,14 @@ class ExGData(DataContainer):
             sample_per_packet = 33
         elif self.explorer.device_chan == 8:
             sample_per_packet = 16
-        elif self.explorer.device_chan == 32:
+        elif self.explorer.device_chan in [16, 32]:
             sample_per_packet = 4
 
         expected_packets = rec_time * self.explorer.sampling_rate / sample_per_packet
         logger.info("Total number of packets in recording (%f): %i" % (rec_time, n_packets))
         logger.info("Expected number of packets in recording (%f): %i" % (rec_time, expected_packets))
 
-        percentage_recieved = round(n_packets / expected_packets) * 100
+        percentage_recieved = round(n_packets * 100 / expected_packets)
         percentage_recieved = percentage_recieved if percentage_recieved <= 100 else 100
         msg = (
             "Recording complete.\n\n"
@@ -450,9 +450,9 @@ class ExGData(DataContainer):
         )
         if expected_packets * 0.95 < n_packets < expected_packets * 1.05:
             # msg += "At least 95% of the expected packets recieved"
-            logger.info("At least 95% of the expected packets were recieved")
+            logger.info(msg)
         else:
-            logger.info("Less than 95% of the expected packets recieved")
+            logger.info(msg)
             # msg += "Less than 95% of the expected packets recieved"
         display_msg(msg_text=msg, popup_type='info')
 
@@ -492,9 +492,12 @@ class ExGPlot(BasePlots):
         """Add maximum and minimum to explorepy
         """
         # if visualization_option in [1, 7]:
-        if self.model.vis_mode == VisModes.SCROLL:
+        if self.model.vis_mode == VisModes.SCROLL and self.model.explorer.device_chan > 16:
             self.ui.verticalScrollBar.setMinimum(1)
             self.ui.verticalScrollBar.setMaximum(25)
+        elif self.model.vis_mode == VisModes.SCROLL and self.model.explorer.device_chan > 9:
+            self.ui.verticalScrollBar.setMinimum(1)
+            self.ui.verticalScrollBar.setMaximum(9)
         else:
             self.ui.verticalScrollBar.setMinimum(18)
             self.ui.verticalScrollBar.setMaximum(26)
@@ -568,6 +571,7 @@ class ExGPlot(BasePlots):
     def _setup_plot_range(self, plot_wdgt: pg.PlotWidget):
         """Setup time axis"""
         n_chan = self.model.explorer.n_active_chan
+        print(f"{n_chan=}")
         timescale = self.time_scale
         value = self.ui.verticalScrollBar.value()
 
