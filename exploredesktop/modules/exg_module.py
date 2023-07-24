@@ -163,9 +163,13 @@ class ExGData(DataContainer):
             sec_th (int): threshold of seconds to display the warning again. Defaults to 10
         """
         t_point = data['t'][0]
+        data_rate = self.explorer.sampling_rate
+        # check if there is packet drop: we check it by checking the difference between
+        # two consecutive timestamps: ideally it should be 1/sps
+        is_unstable = t_point - DataContainer.last_t > 1 / data_rate
         if t_point < 0:
             return
-        elif t_point < DataContainer.last_t and self.bt_drop_warning_displayed is False:
+        elif is_unstable and self.bt_drop_warning_displayed is False:
             logger.warning(
                 "BlueTooth drop:\nt_point={}\nDataContainer.last_t={}\n".format(t_point, DataContainer.last_t))
             self.bt_drop_warning_displayed = True
@@ -173,7 +177,7 @@ class ExGData(DataContainer):
             # self.signals.btDrop.emit(True)
             self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: ConnectionStatus.UNSTABLE.value})
 
-        elif (self.t_bt_drop is not None) and (t_point > DataContainer.last_t) and \
+        elif (self.t_bt_drop is not None) and not is_unstable and \
                 (t_point - self.t_bt_drop > sec_th) and self.bt_drop_warning_displayed is True:
             self.bt_drop_warning_displayed = False
             connection_label = ConnectionStatus.CONNECTED.value.replace("dev_name", self.explorer.device_name)
