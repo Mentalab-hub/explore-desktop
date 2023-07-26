@@ -15,7 +15,7 @@ exit /B 2
 :input_ok
 @REM Set path website repo
 @REM call set /p repo_wiki_path="Enter the path for explore-desktop-release folder in the wiki repository (<your path>\wiki\static\explore-desktop-release)"
-call set repo_wiki_path="C:\Users\ProSomno\Documents\Mentalab\wiki\wiki\static\explore-desktop-release"
+call set repo_wiki_path="C:\Users\ss\Desktop\mentalab-dev\wiki\wiki\static\explore-desktop-release"
 if EXIST %repo_wiki_path% (
     echo "Wiki path is correct"
 ) else (
@@ -72,8 +72,8 @@ call set config_path=%CD%\installer\ExploreDesktopInstaller\ExploreDesktop\confi
 call set package_path=%CD%\installer\ExploreDesktopInstaller\ExploreDesktop\packages
 
 @REM Open repository or update it
-if %mode%==create call C:\Qt\QtIFW-4.2.0\bin\repogen.exe -p %package_path% -r --verbose %repo_wiki_path%
-if %mode%==update call C:\Qt\QtIFW-4.2.0\bin\repogen.exe --update -p %package_path% --verbose %repo_wiki_path%
+if %mode%==create call C:\Qt\Tools\QtInstallerFramework\4.5\bin\repogen.exe -p %package_path% -r --verbose %repo_wiki_path%
+if %mode%==update call C:\Qt\Tools\QtInstallerFramework\4.5\bin\repogen.exe --update -p %package_path% --verbose %repo_wiki_path%
 
 
 @REM Go to wiki repo and push changes
@@ -99,5 +99,5 @@ call git push origin main
 @REM Create installer file
 if %mode%==create (
     call cd %main_explore_path%
-    call C:\Qt\QtIFW-4.2.0\bin\binarycreator.exe --online-only -c %config_path% -p %package_path% --verbose ExploreDesktopInstaller.exe
+    call C:\Qt\Tools\QtInstallerFramework\4.5\bin\binarycreator.exe --online-only -c %config_path% -p %package_path% --verbose ExploreDesktopInstaller.exe
 )

@@ -34,11 +34,13 @@ class BTFrameView(BaseModel):
     def setup_ui_connections(self) -> None:
         """Setup connections between widgets and slots"""
         self.ui.btn_connect.clicked.connect(self.connect_clicked)
-        self.ui.dev_name_input.returnPressed.connect(self.connect_clicked)
-        self.ui.dev_name_input.textChanged.connect(self.auto_capital)
+        self.ui.dev_name_input.lineEdit().returnPressed.connect(self.connect_clicked)
+        self.ui.dev_name_input.lineEdit().textChanged.connect(self.auto_capital)
         self.ui.btn_scan.clicked.connect(self.scan_clicked)
         self.ui.list_devices.clicked.connect(self.scanned_item_clicked)
         self.setup_autocomplete()
+        self.add_names_to_dropdown()
+        self.set_initial_dev_name()
 
     def setup_autocomplete(self) -> None:
         """Set up device name auto completer"""
@@ -74,6 +76,22 @@ class BTFrameView(BaseModel):
             names.append(dev_name[-4:])
             settings.setValue("known_devices", names)
 
+        settings.setValue("last_device", dev_name[-4:])
+
+    def add_names_to_dropdown(self) -> None:
+        """Add device names to initial drop down
+        """
+        names = self.get_names_from_settings()
+        self.ui.dev_name_input.addItems(names)
+
+    def set_initial_dev_name(self) -> None:
+        """Set the key of the dropdown to the last connected device
+        """
+        settings = QSettings("Mentalab", "ExploreDesktop")
+        name = settings.value("last_device")
+        name = "" if name is None else name
+        self.ui.dev_name_input.setCurrentText(name)
+
     #########################
     # Get device name functions
     #########################
@@ -86,7 +104,7 @@ class BTFrameView(BaseModel):
             str: full name of the device (Explore_XXXX). Empty if format is not correct
         """
 
-        input_name = self.ui.dev_name_input.text()
+        input_name = self.ui.dev_name_input.currentText()
 
         if not input_name.startswith("Explore_") and len(input_name) == 4:
             device_name = "Explore_" + input_name
@@ -175,8 +193,8 @@ class BTFrameView(BaseModel):
     @Slot(str)
     def auto_capital(self) -> None:
         """Change input to capital letters"""
-        text = self.ui.dev_name_input.text()
-        self.ui.dev_name_input.setText(text.upper())
+        text = self.ui.dev_name_input.lineEdit().text()
+        self.ui.dev_name_input.lineEdit().setText(text.upper())
 
     @Slot()
     def connect_clicked(self) -> None:
@@ -262,6 +280,15 @@ class BTFrameView(BaseModel):
         elif err_type == ValueError or err_type == SystemError:
             msg = Messages.NO_BT_CONNECTION
             logger.warning("No Bluetooth connection available.")
+            logger.debug(err_msg)
+
+        elif err_type == ConnectionRefusedError:
+            msg = Messages.CONNECTION_REFUSED
+            logger.warning("Connection Refused exception while connecting")
+
+        elif err_type == ConnectionRefusedError:
+            msg = Messages.CONNECTION_REFUSED
+            logger.warning("Connection Refused exception while connecting")
 
         else:
             msg = err_msg

@@ -163,9 +163,13 @@ class ExGData(DataContainer):
             sec_th (int): threshold of seconds to display the warning again. Defaults to 10
         """
         t_point = data['t'][0]
+        data_rate = self.explorer.sampling_rate
+        # check if there is packet drop: we check it by checking the difference between
+        # two consecutive timestamps: ideally it should be 1/sps
+        is_unstable = np.round(t_point - DataContainer.last_t) > np.round(1 / data_rate)
         if t_point < 0:
             return
-        elif t_point < DataContainer.last_t and self.bt_drop_warning_displayed is False:
+        elif is_unstable and self.bt_drop_warning_displayed is False:
             logger.warning(
                 "BlueTooth drop:\nt_point={}\nDataContainer.last_t={}\n".format(t_point, DataContainer.last_t))
             self.bt_drop_warning_displayed = True
@@ -173,7 +177,7 @@ class ExGData(DataContainer):
             # self.signals.btDrop.emit(True)
             self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: ConnectionStatus.UNSTABLE.value})
 
-        elif (self.t_bt_drop is not None) and (t_point > DataContainer.last_t) and \
+        elif (self.t_bt_drop is not None) and is_unstable == False and \
                 (t_point - self.t_bt_drop > sec_th) and self.bt_drop_warning_displayed is True:
             self.bt_drop_warning_displayed = False
             connection_label = ConnectionStatus.CONNECTED.value.replace("dev_name", self.explorer.device_name)
@@ -433,14 +437,14 @@ class ExGData(DataContainer):
             sample_per_packet = 33
         elif self.explorer.device_chan == 8:
             sample_per_packet = 16
-        elif self.explorer.device_chan == 32:
+        elif self.explorer.device_chan in [16, 32]:
             sample_per_packet = 4
 
         expected_packets = rec_time * self.explorer.sampling_rate / sample_per_packet
         logger.info("Total number of packets in recording (%f): %i" % (rec_time, n_packets))
         logger.info("Expected number of packets in recording (%f): %i" % (rec_time, expected_packets))
 
-        percentage_recieved = round(n_packets / expected_packets) * 100
+        percentage_recieved = round(n_packets * 100 / expected_packets)
         percentage_recieved = percentage_recieved if percentage_recieved <= 100 else 100
         msg = (
             "Recording complete.\n\n"
@@ -450,9 +454,9 @@ class ExGData(DataContainer):
         )
         if expected_packets * 0.95 < n_packets < expected_packets * 1.05:
             # msg += "At least 95% of the expected packets recieved"
-            logger.info("At least 95% of the expected packets were recieved")
+            logger.info(msg)
         else:
-            logger.info("Less than 95% of the expected packets recieved")
+            logger.info(msg)
             # msg += "Less than 95% of the expected packets recieved"
         display_msg(msg_text=msg, popup_type='info')
 
@@ -492,9 +496,12 @@ class ExGPlot(BasePlots):
         """Add maximum and minimum to explorepy
         """
         # if visualization_option in [1, 7]:
-        if self.model.vis_mode == VisModes.SCROLL:
+        if self.model.vis_mode == VisModes.SCROLL and self.model.explorer.device_chan > 16:
             self.ui.verticalScrollBar.setMinimum(1)
             self.ui.verticalScrollBar.setMaximum(25)
+        elif self.model.vis_mode == VisModes.SCROLL and self.model.explorer.device_chan > 9:
+            self.ui.verticalScrollBar.setMinimum(1)
+            self.ui.verticalScrollBar.setMaximum(9)
         else:
             self.ui.verticalScrollBar.setMinimum(18)
             self.ui.verticalScrollBar.setMaximum(26)
@@ -568,6 +575,7 @@ class ExGPlot(BasePlots):
     def _setup_plot_range(self, plot_wdgt: pg.PlotWidget):
         """Setup time axis"""
         n_chan = self.model.explorer.n_active_chan
+        print(f"{n_chan=}")
         timescale = self.time_scale
         value = self.ui.verticalScrollBar.value()
 

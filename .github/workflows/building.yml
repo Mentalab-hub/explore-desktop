@@ -1,0 +1,71 @@
+name: building-offline
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - master
+      - develop
+env:
+  exploredesktop_path: 'installer\ExploreDesktopInstaller\ExploreDesktop\packages\com.Mentalab.ExploreDesktop\'
+  config_path: 'installer\ExploreDesktopInstaller\ExploreDesktop\config\config.xml'
+  package_path: 'installer\ExploreDesktopInstaller\ExploreDesktop\packages'
+  usedevelop: 'true'
+jobs:
+  build:
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        os: [ windows-latest ]
+        python: [ 3.9.12 ]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Switch to current branch
+        run: git checkout ${{ env.BRANCH }}
+      - name: Install non-python dependencies on Ubuntu
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install libbluetooth-dev -y
+      - name: Set up Python ${{ matrix.python }}
+        uses: s-weigand/setup-conda@v1
+        with:
+          python-version: ${{ matrix.python }}
+          conda-channels: anaconda, conda-forge, conda-canary
+      - name: Install QT dependencies
+        run: |
+          pip install aqtinstall
+          python -m aqt install-qt -O ${{ github.workspace }}/Qt/ windows desktop 6.2.0 win64_msvc2019_64
+          python -m aqt install-tool -O ${{ github.workspace }}/Qt/ windows desktop tools_ifw qt.tools.ifw.46
+          echo "${{ github.workspace }}/Qt/6.2.0/msvc2019_64/bin/" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "${{ github.workspace }}/Qt/Tools/QtInstallerFramework/4.6/bin/" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Install explorepy depencies and necessary packages
+        run: |
+          pip install pyinstaller==4.7
+          pip install --upgrade pyinstaller-hooks-contrib==2023.2
+          pip install eeglabio
+          pip install mne
+          pip install -e .
+          pip install --upgrade scipy==1.7.3
+      - name: Use develop branch if specified
+        if: ${{ env.usedevelop == 'true' }}
+        run: |
+          pip uninstall -y explorepy
+          pip install git+https://github.com/Mentalab-hub/explorepy.git@develop
+      - name: Build offline executable
+        run: pyinstaller --onedir --console --noconfirm --distpath ${{ env.exploredesktop_path }}data ExploreDesktop.spec
+      - name: Copy icon to data folder
+        run: xcopy ${{ env.exploredesktop_path }}extras\MentalabLogo.ico ${{ env.exploredesktop_path }}data
+      - name: Generate installer
+        run: binarycreator.exe -c ${{ env.config_path }} -p ${{ env.package_path }} --verbose ExploreDesktopInstallerOffline.exe
+      - name: Upload installer
+        uses: actions/upload-artifact@v3
+        with:
+          name: exploredesktop-installer
+          path: ExploreDesktopInstallerOffline.exe

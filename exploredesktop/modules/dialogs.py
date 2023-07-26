@@ -34,7 +34,9 @@ from exploredesktop.modules.utils import (  # isort: skip
 from exploredesktop.modules.ui import (  # isort: skip
     Ui_PlotDialog,
     Ui_RecordingDialog,
-    Ui_BinDialog
+    Ui_BinDialog,
+    Ui_RepairDialog,
+    Ui_Convert_Edf_Eeglab
 )
 
 par_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
@@ -94,6 +96,9 @@ class CustomDialog(QDialog):
 
 
 class PathInputDialog(CustomDialog):
+    """
+    Parent class for dialogs with an input path
+    """
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.file_type = FileTypes.CSV.value
@@ -175,6 +180,7 @@ class RecordingDialog(PathInputDialog):
         """Set up default values for GUI elements
         """
         self.ui.spinBox_recording_time.setMaximum(10000000)
+        # default recording duration is 3600 sec to match explorepy
         self.ui.spinBox_recording_time.setValue(3600)
         self.ui.rdbtn_csv.setChecked(True)
         self.ui.warning_label.setHidden(True)
@@ -212,10 +218,12 @@ class RecordingDialog(PathInputDialog):
         """
         Open a dialog to select file name to be saved
         """
+        # get last path used to save the recordings
         key = QSettingsKeys.RECORD_FOLDER.value
         settings = QSettings("Mentalab", "ExploreDesktop")
         path = get_path_settings(settings, key)
 
+        # Open file explorer to select the folder where to store recordings
         dialog = QFileDialog()
         file_path = dialog.getExistingDirectory(
             self,
@@ -223,8 +231,11 @@ class RecordingDialog(PathInputDialog):
             path,
             QFileDialog.ShowDirsOnly)
 
+        # Set the selected folder in the text field
         self.recording_path = file_path
         self.ui.input_filepath.setText(self.recording_path)
+
+        # If the folder selected is different than the one stored in settings, store it
         if path != self.recording_path:
             settings.setValue(key, self.recording_path)
 
@@ -255,14 +266,18 @@ class RecordingDialog(PathInputDialog):
         Args:
             text (str): input file name
         """
-        new_text = re.sub(GUISettings.RESERVED_CHARS, "", text)
+        new_text = re.sub(r"[|?*<\">[\]+']", "", text)
         self.ui.input_filepath.setText(new_text)
 
     def _display_warning_file_exists(self) -> None:
+        """Display warning to users that file already exists
+        """
         self.ui.input_file_name.setStyleSheet("border: 1px solid rgb(217, 0, 0)")
         super()._display_warning_file_exists()
 
     def _hide_warning(self) -> None:
+        """Hide warning
+        """
         self.ui.input_file_name.setStyleSheet("")
         super()._hide_warning()
 
@@ -361,6 +376,7 @@ class FiltersDialog(CustomDialog):
 
     def verify_input(self) -> None:
         """Verify frequencies are not above/below the threshold
+        and provide visual feedback if they are not correct
         """
 
         hc_freq = "" if self.ui.value_highcutoff.text() in [None, 'None', ''] else self.ui.value_highcutoff.text()
@@ -382,7 +398,7 @@ class FiltersDialog(CustomDialog):
         self._enable_ok_button(enable)
 
     def get_le_stylesheets(self, filter_ok: dict) -> Union[str, str, str]:
-        """Get stylesheets for UI lineedits
+        """Get stylesheets and warning message for UI lineedits
 
         Args:
             filter_ok (dict): dictionary containing whether filters are corrects
@@ -502,9 +518,11 @@ class ConvertBinDialog(PathInputDialog):
 
         self.ui.rdbtn_csv.toggled.connect(self.validate_filepath)
         self.ui.rdbtn_edf.toggled.connect(self.validate_filepath)
+
         self.ui.input_filepath.textChanged.connect(self.validate_filepath)
         self.ui.input_filepath.textChanged.connect(self.validate_input_file)
         self.ui.input_filepath.textChanged.connect(self.check_not_empty)
+
         self.ui.input_dest_folder.textChanged.connect(self.validate_filepath)
         self.ui.input_dest_folder.textChanged.connect(self.check_not_empty)
 
@@ -521,6 +539,7 @@ class ConvertBinDialog(PathInputDialog):
         """
         Open a dialog to select file name to be saved
         """
+        # Get last folder used to convert a bin file
         key = QSettingsKeys.BIN_FOLDER.value
         settings = QSettings("Mentalab", "ExploreDesktop")
         path = get_path_settings(settings, key)
@@ -534,6 +553,8 @@ class ConvertBinDialog(PathInputDialog):
 
         self.bin_path = file_path[0]
         self.ui.input_filepath.setText(self.bin_path)
+
+        # if folder from settings is not the same one as the selected one, update it
         if path != self.bin_path:
             settings.setValue(key, os.path.dirname(self.bin_path))
 
@@ -576,6 +597,8 @@ class ConvertBinDialog(PathInputDialog):
         super()._hide_warning()
 
     def validate_input_file(self) -> None:
+        """Validate input file by making sure selected file is a .BIN file
+        """
         file = self.ui.input_filepath.text()
         if file.replace(" ", "") != "" and not file.endswith(".BIN"):
             self._display_warning_notBin()
@@ -584,10 +607,14 @@ class ConvertBinDialog(PathInputDialog):
             self.ui.warning_label.setText("")
 
     def _display_warning_notBin(self) -> None:
+        """Display warning indicating file in not .BIN
+        """
         self.ui.input_filepath.setStyleSheet("border: 1px solid rgb(217, 0, 0)")
         self.ui.warning_label.setText("File must be .BIN")
 
     def check_not_empty(self) -> None:
+        """Check that none of the fields is empty. Disable OK button if any of them are
+        """
         folder_field = self.ui.input_dest_folder.text().replace(" ", "")
         input_file_field = self.ui.input_filepath.text().replace(" ", "")
         if (folder_field == "" or input_file_field == ""):
@@ -609,12 +636,143 @@ class ConvertBinDialog(PathInputDialog):
         return data
 
 
+class RepairDataDialog(PathInputDialog):
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.ui = Ui_RepairDialog()
+        self.ui.setupUi(self)
+        self.setWindowTitle("Repair .csv")
+
+        self.csv_path = ""
+        self.folder_path = ""
+        self.ui.btn_browse.clicked.connect(self.browse)
+        self.ui.btn_browse.clicked.connect(self.verify_bin_path)
+
+        self.ui.input_filename.textChanged.connect(self.check_not_empty)
+        self.ui.input_filename.textChanged.connect(self.verify_bin_path)
+
+        self.ui.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+        self.ui.warning_label.setHidden(True)
+
+    def browse(self) -> None:
+        """Select csv to repair
+        """
+        key = QSettingsKeys.REPAIR_FOLDER.value
+        settings = QSettings("Mentalab", "ExploreDesktop")
+        path = get_path_settings(settings, key)
+
+        # Launch explorer to select file
+        dialog = QFileDialog()
+        file_path = dialog.getOpenFileName(
+            self,
+            "Select .csv file to repair",
+            path,
+            "CSV (*.csv)")
+
+        self.csv_path = file_path[0]
+        self.ui.input_filename.setText(self.csv_path)
+        self.folder_path = os.path.dirname(self.csv_path)
+        if path != self.csv_path:
+            settings.setValue(key, self.folder_path)
+
+    def verify_bin_path(self) -> None:
+        """Verify there is a .BIN file in the folder containing the csv file selected
+        """
+        try:
+            self.bin_path = self.get_bin_path()
+        except FileNotFoundError:
+            self._display_warning_notBin()
+            # disable button if BIN file not found
+            self.ui.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+            return
+        self._hide_warning()
+        self.ui.input_filename.setStyleSheet("")
+        self.ui.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
+
+    def _display_warning_notBin(self) -> None:
+        """Display warning warning user there is no BIN file in selected folder"""
+        self.ui.input_filename.setStyleSheet("border: 1px solid rgb(217, 0, 0)")
+        self.ui.warning_label.setHidden(False)
+
+    def get_bin_path(self) -> str:
+        """Return path of binary file to use in data repair.
+        Raise FileNotFoundError if no file is found
+        """
+        if self.folder_path == "":
+            return ""
+
+        for file in os.listdir(self.folder_path):
+            if os.path.isfile(os.path.join(self.folder_path, file)) and file.endswith(".BIN"):
+                return os.path.join(self.folder_path, file)
+
+        raise FileNotFoundError
+
+    def check_not_empty(self):
+        """Check that input fields are not empty. Disable OK button if any of them are.
+        """
+        if self.ui.input_filename.text().replace(" ", "") == "":
+            self.ui.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+        else:
+            self.ui.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
+
+    def get_data(self) -> dict:
+        """Get dialog data
+
+        Returns:
+            dict: dictionary with dialog data
+        """
+        data = {
+            "csv_path": self.ui.input_filename.text(),
+            "bin_path": self.get_bin_path()
+        }
+        return data
+
+
+class EdfToEeglabDialogue(PathInputDialog):
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.ui = Ui_Convert_Edf_Eeglab()
+        self.ui.setupUi(self)
+        self.setWindowTitle("BDF+(EDF) to EEGLAB dataset")
+        self.bdf_path = ""
+        self.ui.btn_browse.clicked.connect(self.browse)
+
+    def browse(self) -> None:
+        """Select csv to repair
+        """
+        key = QSettingsKeys.RECORD_FOLDER.value
+        settings = QSettings("Mentalab", "ExploreDesktop")
+        path = get_path_settings(settings, key)
+
+        # Open file explorer to select the folder where to store recordings
+        dialog = QFileDialog()
+        self.bdf_path = dialog.getExistingDirectory(
+            self,
+            "Choose Directory",
+            path,
+            QFileDialog.ShowDirsOnly)
+        self.ui.input_filename.setText(self.bdf_path)
+
+    def get_data(self) -> dict:
+        """Get dialog data
+
+        Returns:
+            dict: dictionary with dialog data
+        """
+        data = {
+            "bdf_path": self.ui.input_filename.text()
+        }
+        return data
+
+
+# Block below to quickly test dialog behavior without launching the whole app
 if __name__ == "__main__":
     import sys
 
     from PySide6.QtWidgets import QApplication
     app = QApplication(sys.argv)
-    dial = RecordingDialog()
+    dial = RepairDataDialog()
+    # dial = RecordingDialog()
     # dial = ConvertBinDialog()
     data = dial.exec()
     print(data)

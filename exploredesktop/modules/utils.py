@@ -40,6 +40,7 @@ def get_widget_by_obj_name(name: str):
                                         If no matching widget is found, returns None
     """
     widgets = QApplication.instance().allWidgets()
+    # iterate over all widget until match is found
     for wdgt in widgets:
         if str(wdgt.objectName()) == name:
             return wdgt
@@ -60,9 +61,7 @@ def display_msg(msg_text: str, title: str = None, popup_type: str = "error"):
     """
     msg = QMessageBox()
     msg.setText(msg_text)
-    # msg.setStyleSheet(Stylesheets.POPUP_STYLESHEET)
-    # TODO change to enum popup type
-    # class abstract, and three subclasses error, info, question
+
     if popup_type == "error":
         wdw_title = "Error" if title is None else title
         msg.setIcon(QMessageBox.Critical)
@@ -90,6 +89,14 @@ def wait_cursor() -> None:
 
 
 def identify_filter(filter_values: tuple):
+    """Identify whether filter is low, high or band pass
+
+    Args:
+        filter_values (tuple): values of the filter
+
+    Returns:
+        Enum: Filer Type
+    """
     if filter_values[0] is not None and filter_values[1] is None:
         filter_type = FilterTypes.HIGHPASS
     elif filter_values[0] is None and filter_values[1] is not None:
@@ -102,10 +109,20 @@ def identify_filter(filter_values: tuple):
     return filter_type
 
 
-def verify_filters(filter_values: tuple, sampling_rate):
+def verify_filters(filter_values: tuple, sampling_rate: int) -> dict:
+    """Verify filters comply with Nyquist theorem
+
+    Args:
+        filter_values (tuple): value of the filters
+        sampling_rate (int): sampling rate
+
+    Returns:
+        dict: key is filter type and value is bool, whether filter is good
+    """
     lc_valid = True
     hc_valid = True
     bp_valid = True
+
     lc_freq = float(filter_values[0]) if filter_values[0] != "" else None
     hc_freq = float(filter_values[1]) if filter_values[1] != "" else None
 
@@ -130,7 +147,16 @@ def verify_filters(filter_values: tuple, sampling_rate):
     return {'lc_freq': lc_valid, 'hc_freq': hc_valid, 'bp_valid': bp_valid}
 
 
-def get_filter_limits(s_rate):
+def get_filter_limits(s_rate: int):
+    """Get filter limits based on sampling rate
+
+    Args:
+        s_rate (int): sampling rate
+
+    Returns:
+        _type_: minimum and maximum accepted frequency
+    """
+
     nyq_freq = s_rate / 2.
     max_hc_freq = round(nyq_freq - 1, 1)
     min_lc_freq = round(0.0035 * nyq_freq, 1)
