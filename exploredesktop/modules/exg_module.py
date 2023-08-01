@@ -177,7 +177,7 @@ class ExGData(DataContainer):
             # self.signals.btDrop.emit(True)
             self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: ConnectionStatus.UNSTABLE.value})
 
-        elif (self.t_bt_drop is not None) and is_unstable == False and \
+        elif (self.t_bt_drop is not None) and is_unstable is False and \
                 (t_point - self.t_bt_drop > sec_th) and self.bt_drop_warning_displayed is True:
             self.bt_drop_warning_displayed = False
             connection_label = ConnectionStatus.CONNECTED.value.replace("dev_name", self.explorer.device_name)
