@@ -177,7 +177,6 @@ installer/ExploreDesktopInstaller/ExploreDesktop/packages/com.Mentalab.ExploreDe
 repository/2022-07-20-1041_meta.7z
 repository/Updates.xml
 repository/com.Mentalab.ExploreDesktop/0.3.2meta.7z
-tests/*
 exploredesktop/modules/ui/old/*
 exploredesktop/modules/ui/MV/*
 
