@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, QTimer
 from exploredesktop.modules.app_settings import ImpModes
 import exploredesktop.main_window as mw
 from exploredesktop.modules.app_settings import Messages
+from exploredesktop.modules.utils import get_widget_by_obj_name
 
 
 def navigate_to_impedance_view(qtbot, window):
@@ -97,15 +98,14 @@ def test_info_pop_up(qtbot):
     qtbot.mouseClick(imp_button, Qt.LeftButton)
 
     # App should be now in imp view
-    imp = window.imp_frame.signals.messageBoxClosed.connect(message_box_closed_callback)
     # Get the reference to the question mark button in the Impedance Frame
-    info = imp.ui.imp_meas_info
+    info = window.imp_frame.ui.imp_meas_info
     # Give the reference to qtbot so it know it
     qtbot.addWidget(info)
 
     def handle_dialog():
         # Get an instance of the currently open window and answer it
-        messagebox = QApplication.activeModalWidget()
+        messagebox = QApplication.activeWindow()
         assert messagebox.text() == Messages.IMP_INFO
         ok_button = messagebox.button(QMessageBox.Ok)
         qtbot.mouseClick(ok_button, Qt.LeftButton)

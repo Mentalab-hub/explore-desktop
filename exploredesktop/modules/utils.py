@@ -61,6 +61,7 @@ def display_msg(msg_text: str, title: str = None, popup_type: str = "error"):
     """
     msg = QMessageBox()
     msg.setText(msg_text)
+    msg.raise_()
 
     if popup_type == "error":
         wdw_title = "Error" if title is None else title
