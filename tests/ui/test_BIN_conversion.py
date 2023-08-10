@@ -60,10 +60,10 @@ def test_convert_file(qtbot):
     except FileExistsError:
         raise FileExistsError('Error in file conversion')
 
+    mw.MainWindow().close()
+
 
 def test_invalid_path(qtbot):
-    mw.MainWindow().show()
-
     input_path = 'This is a wrong path'
     output_path = 'This is a wrong path also'
 
