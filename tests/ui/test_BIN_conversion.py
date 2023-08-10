@@ -6,15 +6,12 @@ import exploredesktop.main_window as mw
 
 
 def test_convert_file(qtbot):
-
-    # File path to the input Bin file:
-    standard_path = "C:/Users/ss/Desktop/mentalab-dev/explore-desktop/tests/ui/data/"
+    data_folder = 'data'
     file_name = "DATA000_8_channel.BIN"
     input_path = os.path.join('data', file_name)
     print(input_path)
     # File path to where the result will be written:
-    result_path = "C:/Users/ss/Desktop/mentalab-dev/explore-desktop/tests//ui/data/"
-    output_path = os.path.abspath(result_path)
+    output_path = os.path.join(os.getcwd(), data_folder)
 
     qtbot.wait(1000)
 
@@ -44,10 +41,10 @@ def test_convert_file(qtbot):
     mw.MainWindow().ui.actionConvert.trigger()
 
     # Checks for CSV files:
-    exg_file = os.path.abspath(standard_path + "DATA000_8_channel_ExG.csv")
-    marker_file = os.path.abspath(standard_path + "DATA000_8_channel_Marker.csv")
-    meta_file = os.path.abspath(standard_path + "DATA000_8_channel_Meta.csv")
-    orn_file = os.path.abspath(standard_path + "DATA000_8_channel_ORN.csv")
+    exg_file = os.path.join(data_folder, "DATA000_8_channel_ExG.csv")
+    marker_file = os.path.join(data_folder, "DATA000_8_channel_Marker.csv")
+    meta_file = os.path.join(data_folder, "DATA000_8_channel_Meta.csv")
+    orn_file = os.path.join(data_folder, "DATA000_8_channel_ORN.csv")
 
     assert os.path.exists(exg_file)
     assert os.path.exists(marker_file)
