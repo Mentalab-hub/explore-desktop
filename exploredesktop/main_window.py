@@ -582,7 +582,7 @@ class MainWindow(QMainWindow, BaseModel):
         self.settings_frame.setup_settings_frame()
         enable = not self.explorer.is_recording and not self.explorer.is_pushing_lsl
         self.settings_frame.enable_settings(enable)
-        self.ui.value_sampling_rate.setEnabled(enable)
+        self.ui.value_sampling_rate.setEnabled(enable and not self.explorer.device_chan > 8)
 
     def slide_main_menu(self) -> None:
         """
