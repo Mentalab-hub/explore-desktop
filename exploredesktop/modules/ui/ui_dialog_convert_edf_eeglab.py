@@ -116,6 +116,6 @@ class Ui_Dialog(object):
         Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Dialog", None))
         self.lbl_step2.setText(QCoreApplication.translate("Dialog", u"Select your recorded file", None))
         self.btn_browse.setText(QCoreApplication.translate("Dialog", u"Browse", None))
-        self.warning_label.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p align=\"center\"><span style=\" color:#d90000;\">The File name must end with .bdf extension</span></p></body></html>", None))
+        self.warning_label.setText(QCoreApplication.translate("Dialog", u"<html><head/><body><p align=\"center\"><span style=\" color:#d90000;\">Select a folder containing all recorded files to convert</span></p></body></html>", None))
     # retranslateUi
 
