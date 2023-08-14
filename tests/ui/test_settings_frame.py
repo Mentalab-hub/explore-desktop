@@ -40,6 +40,7 @@ def test_reset_settings(qtbot):
     assert not window.explorer.is_connected
     print(window.ui.stackedWidget.currentWidget().children())
     assert window.ui.stackedWidget.currentWidget().objectName() == "page_bt"
+    mw.MainWindow().close()
 
 
 def test_apply_settings(qtbot):
@@ -83,10 +84,20 @@ def test_apply_settings(qtbot):
 
     QTimer.singleShot(100, handle_dialog)
     qtbot.mouseClick(btn_apply, Qt.LeftButton, delay=1)
-
+    mw.MainWindow().close()
 
 def test_format_memory_no(qtbot):
-    window = connect_device(qtbot)
+    explorepy.set_bt_interface('mock')
+    window = mw.MainWindow()
+    bt = window.bt_frame
+    input_field = bt.ui.dev_name_input
+    qtbot.addWidget(input_field)
+    input_field.clearEditText()
+    qtbot.keyClicks(input_field, "XXXX")
+
+    with qtbot.waitSignal(window.signals.connectionStatus, timeout=2000):
+        qtbot.keyClick(input_field, Qt.Key_Enter)
+
     format_mem = window.settings_frame.ui.btn_format_memory
     qtbot.addWidget(format_mem)
 
@@ -98,3 +109,4 @@ def test_format_memory_no(qtbot):
 
     QTimer.singleShot(100, handle_dialog)
     qtbot.mouseClick(format_mem, Qt.LeftButton, delay=1)
+    mw.MainWindow().close()
