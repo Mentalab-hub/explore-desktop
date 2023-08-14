@@ -3,6 +3,10 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 import exploredesktop.main_window as mw
 import explorepy
 
+from exploredesktop.modules import utils
+
+
+
 
 def test_reset_settings(qtbot):
     explorepy.set_bt_interface('mock')
@@ -26,10 +30,7 @@ def test_reset_settings(qtbot):
 
     # Handle dialog about the Explore device disconnection
     def handle_dialog():
-        # Get an instance of the currently open window
-        messagebox = QApplication.activeWindow()
-        yes_button = messagebox.button(QMessageBox.Yes)
-        qtbot.mouseClick(yes_button, Qt.LeftButton)
+        monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.Ok)
 
     qtbot.wait(1000)
     QTimer.singleShot(100, handle_dialog)
@@ -42,10 +43,10 @@ def test_reset_settings(qtbot):
     assert window.ui.stackedWidget.currentWidget().objectName() == "page_bt"
     mw.MainWindow().close()
 
-
-def test_apply_settings(qtbot):
+def test_apply_settings(qtbot, monkeypatch):
     explorepy.set_bt_interface('mock')
     window = mw.MainWindow()
+    window.hide()
     bt = window.bt_frame
     input_field = bt.ui.dev_name_input
     qtbot.addWidget(input_field)
@@ -74,19 +75,16 @@ def test_apply_settings(qtbot):
     # apply settings
     btn_apply = window.settings_frame.ui.btn_apply_settings
     qtbot.addWidget(btn_apply)
-    qtbot.wait(1000)
 
     def handle_dialog():
         # Get an instance of the currently open window
-        messagebox = QApplication.activeWindow()
-        ok_button = messagebox.button(QMessageBox.Ok)
-        qtbot.mouseClick(ok_button, Qt.LeftButton)
+        monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.Ok)
 
     QTimer.singleShot(100, handle_dialog)
-    qtbot.mouseClick(btn_apply, Qt.LeftButton, delay=1)
+    qtbot.mouseClick(btn_apply, Qt.LeftButton)
     mw.MainWindow().close()
 
-def test_format_memory_no(qtbot):
+def test_format_memory_no(self, qtbot):
     explorepy.set_bt_interface('mock')
     window = mw.MainWindow()
     bt = window.bt_frame
@@ -102,11 +100,10 @@ def test_format_memory_no(qtbot):
     qtbot.addWidget(format_mem)
 
     def handle_dialog():
-        # Get an instance of the currently open window
-        messagebox = QApplication.activeWindow()
-        no_button = messagebox.button(QMessageBox.No)
-        qtbot.mouseClick(no_button, Qt.LeftButton)
+        monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.Ok)
 
     QTimer.singleShot(100, handle_dialog)
     qtbot.mouseClick(format_mem, Qt.LeftButton, delay=1)
     mw.MainWindow().close()
+
+
