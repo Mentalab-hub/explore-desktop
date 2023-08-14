@@ -1,3 +1,5 @@
+import sys
+
 from pytestqt.qtbot import QtBot
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
@@ -8,10 +10,12 @@ import exploredesktop.main_window as mw
 def test_convert_file(qtbot):
     data_folder = 'data'
     file_name = "DATA000_8_channel.BIN"
-    input_path = os.path.join('data', file_name)
+    base_path = os.path.dirname(os.path.realpath(__file__))
+    input_path = os.path.join(base_path, data_folder, file_name)
     print(input_path)
     # File path to where the result will be written:
-    output_path = os.path.join(os.getcwd(), data_folder)
+    output_path = os.path.join(base_path, data_folder)
+    print(output_path)
 
     qtbot.wait(1000)
 
@@ -41,10 +45,10 @@ def test_convert_file(qtbot):
     mw.MainWindow().ui.actionConvert.trigger()
 
     # Checks for CSV files:
-    exg_file = os.path.join(data_folder, "DATA000_8_channel_ExG.csv")
-    marker_file = os.path.join(data_folder, "DATA000_8_channel_Marker.csv")
-    meta_file = os.path.join(data_folder, "DATA000_8_channel_Meta.csv")
-    orn_file = os.path.join(data_folder, "DATA000_8_channel_ORN.csv")
+    exg_file = os.path.join(base_path, data_folder, "DATA000_8_channel_ExG.csv")
+    marker_file = os.path.join(base_path, data_folder, "DATA000_8_channel_Marker.csv")
+    meta_file = os.path.join(base_path, data_folder, "DATA000_8_channel_Meta.csv")
+    orn_file = os.path.join(base_path, data_folder, "DATA000_8_channel_ORN.csv")
 
     assert os.path.exists(exg_file)
     assert os.path.exists(marker_file)
@@ -59,6 +63,9 @@ def test_convert_file(qtbot):
         os.remove(orn_file)
     except FileExistsError:
         raise FileExistsError('Error in file conversion')
+    except PermissionError:
+        # test shouldn't fail if a file can't be removed
+        print("Could not remove previously created file.", file=sys.stderr)
 
     mw.MainWindow().close()
 
