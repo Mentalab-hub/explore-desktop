@@ -6,11 +6,10 @@ import explorepy
 from exploredesktop.modules import utils
 
 
-
-
-def test_reset_settings(qtbot):
+def test_reset_settings(qtbot, monkeypatch):
     explorepy.set_bt_interface('mock')
     window = mw.MainWindow()
+    window.hide()
     bt = window.bt_frame
     input_field = bt.ui.dev_name_input
     qtbot.addWidget(input_field)
@@ -30,18 +29,19 @@ def test_reset_settings(qtbot):
 
     # Handle dialog about the Explore device disconnection
     def handle_dialog():
-        monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.Ok)
+        # this is a confirmation dialogue box
+        messagebox = utils.get_widget_by_obj_name('disp_box')
+        yes_button = messagebox.button(QMessageBox.Yes)
+        qtbot.mouseClick(yes_button, Qt.LeftButton)
 
-    qtbot.wait(1000)
-    QTimer.singleShot(100, handle_dialog)
-    qtbot.mouseClick(reset_btn, Qt.LeftButton, delay=1)
+    QTimer.singleShot(1000, handle_dialog)
 
-    # Check that back on the Blue Tooth page, and device disconnected
-    qtbot.wait(1000)
+    qtbot.mouseClick(reset_btn, Qt.LeftButton)
+
     assert not window.explorer.is_connected
-    print(window.ui.stackedWidget.currentWidget().children())
     assert window.ui.stackedWidget.currentWidget().objectName() == "page_bt"
     mw.MainWindow().close()
+
 
 def test_apply_settings(qtbot, monkeypatch):
     explorepy.set_bt_interface('mock')
@@ -77,14 +77,15 @@ def test_apply_settings(qtbot, monkeypatch):
     qtbot.addWidget(btn_apply)
 
     def handle_dialog():
-        # Get an instance of the currently open window
+        # this is basically an information dialogue box
         monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.Ok)
 
     QTimer.singleShot(100, handle_dialog)
     qtbot.mouseClick(btn_apply, Qt.LeftButton)
     mw.MainWindow().close()
 
-def test_format_memory_no(self, qtbot):
+
+def test_format_memory_no(qtbot, monkeypatch):
     explorepy.set_bt_interface('mock')
     window = mw.MainWindow()
     bt = window.bt_frame
@@ -100,10 +101,11 @@ def test_format_memory_no(self, qtbot):
     qtbot.addWidget(format_mem)
 
     def handle_dialog():
-        monkeypatch.setattr(QMessageBox, "question", lambda *args: QMessageBox.Ok)
+        # this is a confirmation dialogue box
+        messagebox = utils.get_widget_by_obj_name('disp_box')
+        yes_button = messagebox.button(QMessageBox.Yes)
+        qtbot.mouseClick(yes_button, Qt.LeftButton)
 
     QTimer.singleShot(100, handle_dialog)
     qtbot.mouseClick(format_mem, Qt.LeftButton, delay=1)
     mw.MainWindow().close()
-
-
