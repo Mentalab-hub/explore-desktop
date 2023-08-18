@@ -1,5 +1,6 @@
 """Base module for data classes"""
 import logging
+import math
 from abc import abstractmethod
 from enum import Enum
 from typing import (
@@ -443,7 +444,8 @@ class BasePlots:
         """
         # the x coordinate is the last updated point of the time vector
         pos = t_vector[self.model.pointer - 1]
-
+        if math.isnan(pos):
+            return self.lines
         # at the beggining lines have to be initialized
         if None in self.lines:
             for idx, plt in enumerate(self.plots_list):
