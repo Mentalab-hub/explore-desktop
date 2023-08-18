@@ -163,8 +163,8 @@ class RecordFunctions(BaseModel):
             total_time = datetime.now() - self.t_start_record
             self.signals.recordEnd.emit(total_time.total_seconds())
             self.t_start_record = None
-            self.ui.actionRecorded_visualization.setEnabled(False)
 
+        self.ui.actionRecorded_visualization.setEnabled(False)
         self.explorer.record_filename = ""
         try:
             self.timer.stop()
