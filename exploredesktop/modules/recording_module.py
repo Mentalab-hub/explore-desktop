@@ -67,7 +67,7 @@ class RecordFunctions(BaseModel):
         self.explorer.record_data(
             file_name=os.path.join(file_path, file_name),
             file_type=file_type,
-            # duration=record_duration,
+            duration=record_duration,
             exg_ch_names=self.explorer.active_chan_list(custom_name=True)
         )
 
@@ -156,16 +156,21 @@ class RecordFunctions(BaseModel):
         """
         Stop recording
         """
-        if self.explorer.is_recording and self.t_start_record is not None:
-            total_time = datetime.now() - self.t_start_record
+        if self.explorer.is_recording:
             self.explorer.stop_recording()
-            self.timer.stop()
-            self._update_button(start=False)
+
+        if self.t_start_record is not None:
+            total_time = datetime.now() - self.t_start_record
             self.signals.recordEnd.emit(total_time.total_seconds())
             self.t_start_record = None
-
-            self.explorer.record_filename = ""
             self.ui.actionRecorded_visualization.setEnabled(False)
+
+        self.explorer.record_filename = ""
+        try:
+            self.timer.stop()
+        except AttributeError:
+            pass
+        self._update_button(start=False)
 
     def start_timer_recorder(self, duration: int) -> None:
         """Start timer to display recording time
