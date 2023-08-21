@@ -167,10 +167,11 @@ class ExGData(DataContainer):
         allowed_time_period = 2 * np.round(1 / data_rate, 3)
         # check if there is packet drop: we check it by checking the difference between
         # two consecutive timestamps: ideally it should be 1/sps
+        sample_diff = np.round(t_point - DataContainer.last_t, 3)
         if self.explorer.is_explore_plus_device() is True:
-            is_unstable = np.round(t_point - DataContainer.last_t, 3) > allowed_time_period
+            is_unstable = sample_diff > allowed_time_period
         else:
-            is_unstable = np.round(t_point - DataContainer.last_t, 3) <= allowed_time_period
+            is_unstable = sample_diff <= -1 * allowed_time_period
         if t_point < 0:
             return
         elif is_unstable and self.bt_drop_warning_displayed is False:
