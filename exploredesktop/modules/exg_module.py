@@ -169,7 +169,7 @@ class ExGData(DataContainer):
         if self.explorer.is_explore_plus_device() is True:
             is_unstable = np.round(t_point - DataContainer.last_t) > np.round(1 / data_rate)
         else:
-            is_unstable = t_point - DataContainer.last_t > 1 / data_rate
+            is_unstable = t_point - DataContainer.last_t <= 1 / data_rate
         if t_point < 0:
             return
         elif is_unstable and self.bt_drop_warning_displayed is False:
@@ -179,7 +179,6 @@ class ExGData(DataContainer):
             self.t_bt_drop = t_point
             # self.signals.btDrop.emit(True)
             self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: ConnectionStatus.UNSTABLE.value})
-
         elif (self.t_bt_drop is not None) and not is_unstable and \
                 (t_point - self.t_bt_drop > sec_th) and self.bt_drop_warning_displayed:
             self.bt_drop_warning_displayed = False
