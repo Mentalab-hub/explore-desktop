@@ -66,6 +66,12 @@ class ExGData(DataContainer):
         self.mode = ExGModes.EEG
         self.vis_mode = VisModes.SCROLL
 
+        # start bt drop detection timer
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.handle_bt_drop)
+        self.timer.setInterval(5000)  # 5000 milliseconds (5 seconds)
+        self.timer.start()
+
     def reset_vars(self) -> None:
         """Reset class variables"""
         self._baseline = None
@@ -155,37 +161,34 @@ class ExGData(DataContainer):
         self.signals.updateDataAttributes.emit([DataAttributes.DATA])
         self.signals.tRangeEXGChanged.emit(0)
 
-    def handle_bt_drop(self, data: dict, sec_th: int = 10) -> None:
+    def handle_bt_drop(self) -> None:
         """Handle bluetooth drop
 
         Args:
             data (dict): exg data
             sec_th (int): threshold of seconds to display the warning again. Defaults to 10
         """
-        t_point = data['t'][0]
-        data_rate = self.explorer.sampling_rate
-        allowed_time_period = 2 * np.round(1 / data_rate, 3)
-        # check if there is packet drop: we check it by checking the difference between
-        # two consecutive timestamps: ideally it should be 1/sps
-        sample_diff = np.round(t_point - DataContainer.last_t, 3)
-        if self.explorer.is_explore_plus_device() is True:
-            is_unstable = sample_diff > allowed_time_period
-        else:
-            is_unstable = sample_diff <= -1 * allowed_time_period
-        if t_point < 0:
+        if self.packet_count == 0:
             return
-        elif is_unstable and self.bt_drop_warning_displayed is False:
-            logger.warning(
-                "BlueTooth drop:\nt_point={}\nDataContainer.last_t={}\n".format(t_point, DataContainer.last_t))
-            self.bt_drop_warning_displayed = True
-            self.t_bt_drop = t_point
-            # self.signals.btDrop.emit(True)
+        if self.explorer.is_bt_link_unstable():
             self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: ConnectionStatus.UNSTABLE.value})
-        elif (self.t_bt_drop is not None) and not is_unstable and \
-                (t_point - self.t_bt_drop > sec_th) and self.bt_drop_warning_displayed:
-            self.bt_drop_warning_displayed = False
+        else:
             connection_label = ConnectionStatus.CONNECTED.value.replace("dev_name", self.explorer.device_name)
             self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: connection_label})
+
+        # if t_point < 0:
+        #     return
+        # elif is_unstable and self.bt_drop_warning_displayed is False:
+        #     logger.warning(
+        #         "BlueTooth drop:\nt_point={}\nDataContainer.last_t={}\n".format(t_point, DataContainer.last_t))
+        #     self.bt_drop_warning_displayed = True
+        #     self.t_bt_drop = t_point
+        #     # self.signals.btDrop.emit(True)
+        #     self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: ConnectionStatus.UNSTABLE.value})
+        # elif (self.t_bt_drop is not None) and not is_unstable and \
+        #         (t_point - self.t_bt_drop > sec_th) and self.bt_drop_warning_displayed:
+        #     self.bt_drop_warning_displayed = False
+
 
     def callback(self, packet: explorepy.packet.EEG) -> None:
         """Callback to get EEG data
@@ -206,6 +209,7 @@ class ExGData(DataContainer):
             DataContainer.vis_time_offset = timestamp[0]
 
         time_vector = timestamp - DataContainer.vis_time_offset
+
 
         # Downsampling
         if Settings.DOWNSAMPLING:
@@ -228,7 +232,6 @@ class ExGData(DataContainer):
         self.insert_new_data(data, exg=True)
         self.update_pointer(data)
         self.new_t_axis()
-        self.handle_bt_drop(data, sec_th=10)
 
         DataContainer.last_t = data['t'][-1]
         self.packet_count += 1
@@ -483,6 +486,7 @@ class ExGPlot(BasePlots):
         self.plots_list = [self.ui.plot_exg]
 
         self.timer = QTimer()
+        self.bt_stability_check_timer = QTimer()
 
     def setup_ui_connections(self) -> None:
         """Setup connections between widgets and slots"""
@@ -495,6 +499,7 @@ class ExGPlot(BasePlots):
         # TODO: uncomment when implemented
         # self.ui.cb_antialiasing.stateChanged.connect(self.antialiasing)
         self.ui.verticalScrollBar.valueChanged.connect(self.scroll)
+
 
     def setup_scrollbar(self):
         """Add maximum and minimum to explorepy
