@@ -189,7 +189,6 @@ class ExGData(DataContainer):
         #         (t_point - self.t_bt_drop > sec_th) and self.bt_drop_warning_displayed:
         #     self.bt_drop_warning_displayed = False
 
-
     def callback(self, packet: explorepy.packet.EEG) -> None:
         """Callback to get EEG data
 
@@ -209,7 +208,6 @@ class ExGData(DataContainer):
             DataContainer.vis_time_offset = timestamp[0]
 
         time_vector = timestamp - DataContainer.vis_time_offset
-
 
         # Downsampling
         if Settings.DOWNSAMPLING:
@@ -499,7 +497,6 @@ class ExGPlot(BasePlots):
         # TODO: uncomment when implemented
         # self.ui.cb_antialiasing.stateChanged.connect(self.antialiasing)
         self.ui.verticalScrollBar.valueChanged.connect(self.scroll)
-
 
     def setup_scrollbar(self):
         """Add maximum and minimum to explorepy
