@@ -25,7 +25,7 @@ def test_cancel_dialog(qtbot):
     with qtbot.waitSignal(window.signals.connectionStatus, timeout=2000):
         qtbot.keyClick(input_field, Qt.Key_Enter)
 
-    window.show()
+    #window.show()
     # Navigate to the recording Frame
     record_btn = window.ui.btn_plots
     qtbot.addWidget(record_btn)
@@ -38,7 +38,6 @@ def test_cancel_dialog(qtbot):
     qtbot.mouseClick(record_btn, Qt.LeftButton, delay=1)
     assert not window.explorer.is_recording
     window.close()
-    QApplication.instance().quit()
 
 
 def test_recording(qtbot):
@@ -80,11 +79,12 @@ def test_recording(qtbot):
         messagebox = QApplication.activeWindow()
         ok_button = messagebox.button(QMessageBox.Ok)
         qtbot.mouseClick(ok_button, Qt.LeftButton)
+        window.close()
 
-    QTimer.singleShot(500, handle_dialog_2)
+    QTimer.singleShot(100, handle_dialog_2)
     qtbot.mouseClick(record_btn, Qt.LeftButton)
     qtbot.wait(2000)
-    window.close()
+
 
 
 def test_visualisation_graph(qtbot):
@@ -99,7 +99,7 @@ def test_visualisation_graph(qtbot):
     with qtbot.waitSignal(window.signals.connectionStatus, timeout=2000):
         qtbot.keyClick(input_field, Qt.Key_Enter)
 
-    window.show()
+    #window.show()
     # Navigate to the recording Frame
     plot_view_btn = window.ui.btn_plots
     qtbot.addWidget(plot_view_btn)
