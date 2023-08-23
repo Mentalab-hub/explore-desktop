@@ -596,6 +596,39 @@ class SettingsFrameView(BaseModel):
         settings_dict = self._read_settings_file(file_path)
         return settings_dict
 
+    def convert_bin(self):
+        dialog = ConvertBinDialog()
+        data = dialog.exec()
+        if data is False:
+            return
+        try:
+            self.explorer.convert_bin(
+                bin_file=data['bin_path'],
+                out_dir=data['dst_folder'],
+                file_type=data['file_type'],
+                out_dir_is_full=True
+            )
+        except AssertionError as msg:
+            display_msg(msg.args[0], popup_type="error")
+            return
+
+        display_msg("Conversion finished", popup_type="info")
+
+
+class CheckBoxDelegate(QItemDelegate):
+    """
+    A delegate that places a fully functioning QCheckBox cell of the column to which it's applied.
+    """
+    def __init__(self, parent):
+        QItemDelegate.__init__(self, parent)
+
+    # pylint: disable=invalid-name
+    def createEditor(self, parent, option, index):
+        """
+        Important, otherwise an editor is created if the user clicks in this cell.
+        """
+        return None
+      
     @staticmethod
     def _read_settings_file(file_path: str) -> dict:
         """Read yaml settings file
