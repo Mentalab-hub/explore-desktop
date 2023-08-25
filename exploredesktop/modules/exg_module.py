@@ -5,6 +5,7 @@ import explorepy
 import numpy as np
 import pyqtgraph as pg
 from explorepy.tools import HeartRateEstimator
+from pylsl import local_clock
 from PySide6.QtCore import (
     QTimer,
     Slot
@@ -27,9 +28,6 @@ from exploredesktop.modules.base_data_module import (  # isort:skip
 )
 from exploredesktop.modules.utils import _remove_old_plot_item, display_msg   # isort:skip
 
-from pylsl import (
-    local_clock
-)
 
 logger = logging.getLogger("explorepy." + __name__)
 
