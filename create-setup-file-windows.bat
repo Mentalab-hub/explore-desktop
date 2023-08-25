@@ -43,15 +43,13 @@ call python -m pip install --upgrade pip
 @REM Install Pyinstaller
 call pip install pyinstaller==4.7
 
-@REM Uncomment below if ExploreDesktop required the develop branch of explorepy
-call pip uninstall -y explorepy
-call pip install git+https://github.com/Mentalab-hub/explorepy.git@develop
-
 @REM Install ExploreDesktop
 call pip install eeglabio
 call pip install mne
 call pip install -e .
-
+@REM Uncomment below if ExploreDesktop required the develop branch of explorepy
+@REM call pip uninstall -y explorepy
+@REM call pip install git+https://github.com/Mentalab-hub/explorepy.git@develop
 
 @REM  Clean required directories
 call set exploredesktop_path="installer\ExploreDesktopInstaller\ExploreDesktop\packages\com.Mentalab.ExploreDesktop\"
