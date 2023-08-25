@@ -5,7 +5,6 @@ import explorepy
 import numpy as np
 import pyqtgraph as pg
 from explorepy.tools import HeartRateEstimator
-from pylsl import local_clock
 from PySide6.QtCore import (
     QTimer,
     Slot
