@@ -101,8 +101,6 @@ class SettingsFrameView(BaseModel):
     def setup_ui_connections(self) -> None:
         """Connect ui widgets to corresponding slot
         """
-        self.ui.value_sampling_rate.currentTextChanged.connect(self.display_sr_warning)
-
         self.ui.btn_reset_settings.clicked.connect(self.reset_settings)
         self.ui.btn_format_memory.clicked.connect(self.format_memory)
         self.ui.btn_apply_settings.clicked.connect(self.change_settings)
@@ -362,18 +360,6 @@ class SettingsFrameView(BaseModel):
         if self.filters.current_filters is not None:
             self.signals.updateDataAttributes.emit([DataAttributes.BASELINE])
             self.explorer.stream_processor.remove_filters()
-
-    ###
-    # Vis feedback slots
-    ###
-    @Slot()
-    def display_sr_warning(self) -> None:
-        """Display warning for 1000 Hz sampling rate
-        """
-        if int(self.ui.value_sampling_rate.currentText()) == 1000:
-            self.ui.lbl_sr_warning.show()
-        else:
-            self.ui.lbl_sr_warning.hide()
 
     @Slot()
     def disable_apply(self, index: QModelIndex) -> None:

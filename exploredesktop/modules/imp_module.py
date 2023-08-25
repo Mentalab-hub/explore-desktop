@@ -310,13 +310,6 @@ class ImpFrameView():
         mode = self.model.mode
         rules_dict = Settings.COLOR_RULES_DRY if mode == ImpModes.DRY else Settings.COLOR_RULES_WET
 
-        # NOTE
-        # Remove this is color code for dry mode is implemented
-        if mode == ImpModes.DRY:
-            self.ui.frame_legend.setHidden(True)
-        else:
-            self.ui.frame_legend.setHidden(False)
-
         label = "<=" + str(rules_dict["green"])
         color = Stylesheets.GREEN_IMPEDANCE_STYLESHEET
         stylesheet = f"""

@@ -17,7 +17,7 @@
    <item>
     <widget class="QLabel" name="lbl_step2">
      <property name="text">
-      <string>Select your recorded file</string>
+      <string>Select Folder</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -57,7 +57,7 @@
    <item>
     <widget class="QLabel" name="warning_label">
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; color:#d90000;&quot;&gt;The File name must end with .bdf extension&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Select a folder containing all recorded files to convert&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
    </item>
