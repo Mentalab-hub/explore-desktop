@@ -70,10 +70,8 @@ class ExGData(DataContainer):
         # start bt drop detection timer
         self.timer = QTimer()
         self.timer.timeout.connect(self.handle_bt_drop)
-        self.timer.setInterval(1000)  # 5000 milliseconds (5 seconds)
+        self.timer.setInterval(1000)
         self.timer.start()
-
-        self.unstable_bt_start_time = local_clock()
 
     def reset_vars(self) -> None:
         """Reset class variables"""
@@ -174,13 +172,10 @@ class ExGData(DataContainer):
         if self.packet_count == 0 or self.explorer.device_name is None:
             return
         if self.explorer.is_bt_link_unstable():
-            self.unstable_bt_start_time = local_clock()
             self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: ConnectionStatus.UNSTABLE.value})
         else:
-            # checks if last unstable state was between 15 and 10 seconds
-            if 15 > (local_clock() - self.unstable_bt_start_time) > 10:
-                connection_label = ConnectionStatus.CONNECTED.value.replace("dev_name", self.explorer.device_name)
-                self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: connection_label})
+            connection_label = ConnectionStatus.CONNECTED.value.replace("dev_name", self.explorer.device_name)
+            self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: connection_label})
 
     def callback(self, packet: explorepy.packet.EEG) -> None:
         """Callback to get EEG data

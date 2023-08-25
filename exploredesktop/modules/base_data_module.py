@@ -257,6 +257,10 @@ class DataContainer(BaseModel):
         # set time ticks based on time vector values
         t_ticks = self.t_plot_data.copy()
         t_ticks[self.pointer:] -= self.timescale
+
+        import warnings
+        warnings.filterwarnings(action='ignore', category=RuntimeWarning)
+        # suppress runtime warning for NaN
         t_ticks = t_ticks.astype(int)
 
         # number of points equals to one per second
