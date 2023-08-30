@@ -6,5 +6,5 @@ call pip install -e .
 call pyinstaller ExploreDesktop.spec
 call xcopy .\exploredesktop\images\MentalabLogo.ico .\dist\ExploreDesktop\
 call conda deactivate
-call conda remove -n generate_offline_executable_exploredesktop
+call conda remove -n generate_offline_executable_exploredesktop --all
 @pause

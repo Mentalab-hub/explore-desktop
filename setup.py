@@ -8,13 +8,13 @@ from setuptools import (
 with open('README.md') as readme_file:
     readme = readme_file.read()
 
-requirements = ['PySide6==6.4.1',  # working v: 6.2.1 (not in p3.11)
-                'pandas==1.3.4',  # 2.0.3
-                'pyqtgraph==0.12.3',  # 0.13.3
-                'mne==0.24.1',  # 1.5.0
+requirements = ['PySide6==6.4.1',  # 6.5.2 breaks the footer module
+                'pandas==2.0.3',
+                'pyqtgraph==0.13.3',
+                'mne==1.5.0',
                 'explorepy',
-                'scipy==1.11.2',  # working v: 1.7.3 (not in p3.11), 1.9.0 fails installing?
-                'numpy==1.25.2'  # working: v: 1.21.4 (not in p3.11), 1.22.0 clashes with eeglabio? on p3.11??????????????
+                'scipy==1.11.2',
+                'numpy==1.25.2'
                 ]
 
 test_requirements = ["pytest",
