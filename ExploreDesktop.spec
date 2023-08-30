@@ -26,7 +26,7 @@ elif sys.platform == "win32":
 
 a = Analysis([main_path],
              pathex=[get_python_lib()],
-             binaries=binaries,
+             binaries=[],
              datas=[],
              hiddenimports=[],
              hookspath=[],
@@ -37,7 +37,7 @@ a = Analysis([main_path],
              win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
-a.datas += Tree(path.dirname(pylsl.__file__), prefix='pylsl', excludes='__pycache__')
+#a.datas += Tree(path.dirname(pylsl.__file__), prefix='pylsl', excludes='__pycache__')
 a.datas += Tree(path.dirname(mne.__file__), prefix='mne', excludes='__pycache__')
 a.datas += Tree(path.dirname(eeglabio.__file__), prefix='eeglabio', excludes='__pycache__')
 
