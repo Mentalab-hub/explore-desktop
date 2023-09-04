@@ -27,7 +27,7 @@ elif sys.platform == "win32":
 a = Analysis([main_path],
              pathex=[get_python_lib()],
              binaries=[],
-             datas=[],
+             datas=[(icon_path, '.')],
              hiddenimports=[],
              hookspath=[],
              hooksconfig={},
