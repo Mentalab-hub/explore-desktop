@@ -1,15 +1,20 @@
 # -*- mode: python ; coding: utf-8 -*-
 from os import path
+import shutil
 import sys
 import pylsl
 import mne
 import eeglabio
 from distutils.sysconfig import get_python_lib
 
+icon_base_path = path.join(".", "installer", "ExploreDesktopInstaller", "ExploreDesktop", "packages", "com.Mentalab.ExploreDesktop", "extras")
+
+exe_name = "ExploreDesktop"
+
 if sys.platform == "darwin":
-    icon_path = "./installer/ExploreDesktopInstaller/ExploreDesktop/packages/com.Mentalab.ExploreDesktop/extras/MentalabLogo.icns"
+    icon_path = path.join(icon_base_path, "MentalabLogo.icns")
 else:
-    icon_path = "./installer/ExploreDesktopInstaller/ExploreDesktop/packages/com.Mentalab.ExploreDesktop/extras/MentalabLogo.ico"
+    icon_path = path.join(icon_base_path, "MentalabLogo.ico")
 
 block_cipher = None
 main_path = path.join('exploredesktop', 'main.py')
@@ -27,7 +32,7 @@ elif sys.platform == "win32":
 a = Analysis([main_path],
              pathex=[get_python_lib()],
              binaries=[],
-             datas=[(icon_path, '.')],
+             datas=[],
              hiddenimports=[],
              hookspath=[],
              hooksconfig={},
@@ -48,7 +53,7 @@ exe = EXE(pyz,
           a.scripts, 
           [],
           exclude_binaries=True,
-          name='ExploreDesktop',
+          name=exe_name,
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
@@ -65,11 +70,11 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='ExploreDesktop')
+               name=exe_name)
 
 if sys.platform == 'darwin':
     app = BUNDLE(coll,
-                 name='ExploreDesktop.app',
+                 name=f'{exe_name}.app',
                  icon=icon_path,
                  bundle_identifier='com.mentalab.exploredesktop',
                  version='0.7.1',
@@ -80,3 +85,6 @@ if sys.platform == 'darwin':
                   'LSBackgroundOnly': False,
                   'NSBluetoothPeripheralUsageDescription': 'ExploreDesktop uses Bluetooth to communicate with the Explore devices.'
                  })
+
+target_location = path.join('.', 'dist', exe_name)
+shutil.copy(icon_path, target_location)
