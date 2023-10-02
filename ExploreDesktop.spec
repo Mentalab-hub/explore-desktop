@@ -7,6 +7,8 @@ import mne
 import eeglabio
 from distutils.sysconfig import get_python_lib
 
+global DISTPATH
+
 icon_base_path = path.join(".", "installer", "ExploreDesktopInstaller", "ExploreDesktop", "packages", "com.Mentalab.ExploreDesktop", "extras")
 
 exe_name = "ExploreDesktop"
@@ -86,5 +88,5 @@ if sys.platform == 'darwin':
                   'NSBluetoothPeripheralUsageDescription': 'ExploreDesktop uses Bluetooth to communicate with the Explore devices.'
                  })
 
-target_location = path.join('.', 'dist', exe_name)
+target_location = path.join(DISTPATH, exe_name)
 shutil.copy(icon_path, target_location)
