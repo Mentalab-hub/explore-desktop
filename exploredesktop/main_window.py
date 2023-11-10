@@ -65,7 +65,7 @@ WINDOW_SIZE = False
 
 logger = logging.getLogger("explorepy." + __name__)
 
-if sys.platform == "linux" or sys.platform == "linux2":
+if sys.platform == "linux" or sys.platform == "linux2" or sys.platform == "darwin":
     logger.debug("CWD: %s" % os.getcwd())
     dir_main = os.path.dirname(os.path.abspath(__file__))
     ICON_PATH = os.path.join(dir_main, "images", "MentalabLogo.ico")
