@@ -2,18 +2,19 @@ import numpy as np
 
 from vispy import app, gloo
 from vispy.gloo import Program, VertexBuffer, IndexBuffer
-from vispy.util.transforms import perspective, translate, rotate
+from vispy.util.transforms import perspective, translate
 from vispy.geometry import create_box
 
 
 class OrientationVisualiser:
-    '''Adds a view to the orientation tab which contains a rotating cube
-    (to be replaced with the orientation visualisation of the device)
+    '''Adds a view to the orientation tab which contains a cube visualising the device orientation,
+    requires calibration data to work (there is currently no way to calibrate the device from Explore Desktop!)
     '''
     def __init__(self, ui) -> None:
         self.ui = ui
-        c = OrientationVisualisationCanvas().native
-        self.ui.horizontal_orientation_layout.addWidget(c)
+        c = OrientationVisualisationCanvas()
+        self.callback = c.on_mapped_orn_received
+        self.ui.horizontal_orientation_layout.addWidget(c.native)
 
 
 vertex = """
@@ -146,8 +147,6 @@ class OrientationVisualisationCanvas(app.Canvas):
 
         self.activate_zoom()
 
-        self.timer = app.Timer('auto', self.on_timer, start=True)
-
     def on_draw(self, event):
         gloo.clear(color=True, depth=True)
         self.program.draw('triangles', self.indices)
@@ -161,11 +160,7 @@ class OrientationVisualisationCanvas(app.Canvas):
                                  2.0, 10.0)
         self.program['projection'] = projection
 
-    def on_timer(self, event):
-        self.theta += .5
-        self.phi += .5
-        new_model = np.dot(rotate(self.theta, (0, 0, 1)),
-                           rotate(self.phi, (0, 1, 0)))
-        self.program['model'] = new_model
-        self.program['normal_matrix'] = np.linalg.inv(new_model).T
+    def on_mapped_orn_received(self, packet):
+        self.program['model'] = packet.matrix
+        self.program['normal_matrix'] = np.linalg.inv(packet.matrix).T
         self.update()

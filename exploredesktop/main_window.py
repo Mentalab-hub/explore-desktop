@@ -581,6 +581,7 @@ class MainWindow(QMainWindow, BaseModel):
         self.explorer.subscribe(callback=self.exg_plot.model.callback, topic=TOPICS.filtered_ExG)
         self.explorer.subscribe(callback=self.fft_plot.model.callback, topic=TOPICS.filtered_ExG)
         self.explorer.subscribe(callback=self.mkr_plot.model.callback, topic=TOPICS.marker)
+        self.explorer.subscribe(callback=self.vis_orn.callback, topic=TOPICS.mapped_orn)
 
     def _move_to_settings(self) -> None:
         """Actions to perform before moving to settings
