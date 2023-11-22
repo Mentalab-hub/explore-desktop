@@ -14,7 +14,8 @@ requirements = ['PySide6==6.2.1',
                 'mne==0.24.1',
                 'explorepy',
                 'scipy==1.10.0',
-                'numpy>= 1.22'
+                'numpy>= 1.22',
+                'vispy==0.14.1'
                 ]
 
 test_requirements = ["pytest==6.2.5",

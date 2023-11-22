@@ -488,7 +488,7 @@ QTabBar::tab{
              <string notr="true">f</string>
             </property>
             <property name="currentIndex">
-             <number>4</number>
+             <number>3</number>
             </property>
             <widget class="QWidget" name="page_home">
              <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -1987,7 +1987,7 @@ font: 11pt;</string>
                  <string notr="true"/>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>1</number>
                 </property>
                 <widget class="QWidget" name="exg">
                  <attribute name="title">
@@ -2012,7 +2012,11 @@ font: 11pt;</string>
                  </attribute>
                  <layout class="QHBoxLayout" name="horizontalLayout_22">
                   <item>
-                   <widget class="GraphicsLayoutWidget" name="plot_orn"/>
+                   <layout class="QHBoxLayout" name="horizontal_orientation_layout">
+                    <item>
+                     <widget class="GraphicsLayoutWidget" name="plot_orn"/>
+                    </item>
+                   </layout>
                   </item>
                  </layout>
                 </widget>
@@ -2968,7 +2972,7 @@ p, li { white-space: pre-wrap; }
                <rect>
                 <x>130</x>
                 <y>150</y>
-                <width>259</width>
+                <width>260</width>
                 <height>34</height>
                </rect>
               </property>
@@ -3219,7 +3223,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1116</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

@@ -54,6 +54,7 @@ from exploredesktop.modules.lsl_module import IntegrationFrameView  # isort:skip
 from exploredesktop.modules.menubar_module import MenuBarActions   # isort:skip
 from exploredesktop.modules.mkr_module import MarkerPlot  # isort:skip
 from exploredesktop.modules.orn_module import ORNPlot  # isort:skip
+from exploredesktop.modules.orn_vis_module import OrientationVisualiser  # isort:skip
 from exploredesktop.modules.recording_module import RecordFunctions  # isort:skip
 from exploredesktop.modules.settings_module import SettingsFrameView  # isort:skip
 from exploredesktop.modules.utils import (  # isort:skip
@@ -146,6 +147,11 @@ class MainWindow(QMainWindow, BaseModel):
         self.fft_plot = FFTPlot(self.ui)
         self.mkr_plot = MarkerPlot(self.ui)
         self.mkr_plot.setup_ui_connections()
+
+        self.vis_orn = OrientationVisualiser(self.ui)
+
+        self.ui.horizontal_orientation_layout.setStretch(0, 3)  # Set stretch for ORN plot to 3 (75%)
+        self.ui.horizontal_orientation_layout.setStretch(1, 1)  # Set stretch for ORN vis to 1 (25%)
 
         self.ui.tabWidget.currentChanged.connect(self.plot_tab_changed)
 
