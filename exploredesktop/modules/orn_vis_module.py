@@ -1,5 +1,7 @@
 import numpy as np
 
+from PySide6.QtWidgets import QVBoxLayout, QPushButton
+
 from vispy import app, gloo
 from vispy.gloo import Program, VertexBuffer, IndexBuffer
 from vispy.util.transforms import perspective, translate
@@ -14,7 +16,23 @@ class OrientationVisualiser:
         self.ui = ui
         c = OrientationVisualisationCanvas()
         self.callback = c.on_mapped_orn_received
-        self.ui.horizontal_orientation_layout.addWidget(c.native)
+        self.vertical_layout = QVBoxLayout()
+        self.ui.horizontal_orientation_layout.addLayout(self.vertical_layout)
+        self.vertical_layout.addWidget(c.native)
+
+        self.reset_orn_button = QPushButton(text="Reset orientation")
+        self.reset_orn_button.clicked.connect(c.reset_orn)
+
+        self.calibrate_orn_button = QPushButton(text="Calibrate orientation")
+        self.calibrate_orn_button.clicked.connect(self.calibrate_orientation)
+
+        self.vertical_layout.addWidget(self.reset_orn_button)
+        self.vertical_layout.addWidget(self.calibrate_orn_button)
+
+        #self.ui.horizontal_orientation_layout.addWidget(c.native)
+
+    def calibrate_orientation(self):
+        raise NotImplementedError
 
 
 vertex = """
@@ -124,6 +142,7 @@ class OrientationVisualisationCanvas(app.Canvas):
         view = translate(view_pos)
         model = np.eye(4, dtype=np.float32)
         self.program['model'] = model
+        self.default_orientation = model
         self.program['view'] = view
         self.program['view_pos'] = view_pos
         self.program['normal_matrix'] = np.linalg.inv(model).T
@@ -163,6 +182,11 @@ class OrientationVisualisationCanvas(app.Canvas):
         self.program['projection'] = projection
 
     def on_mapped_orn_received(self, packet):
-        self.program['model'] = packet.matrix
-        self.program['normal_matrix'] = np.linalg.inv(packet.matrix).T
+        new_model = np.matmul(self.default_orientation, packet.matrix)
+        self.program['model'] = new_model
+        self.program['normal_matrix'] = np.linalg.inv(new_model).T
         self.update()
+
+    def reset_orn(self):
+        self.default_orientation = np.matmul(np.linalg.inv(np.reshape(self.program['model'], (4, 4))),
+                                             self.default_orientation)
