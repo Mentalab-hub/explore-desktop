@@ -8,7 +8,7 @@ from vispy.geometry import create_box
 
 class OrientationVisualiser:
     '''Adds a view to the orientation tab which contains a cube visualising the device orientation,
-    requires calibration data to work (there is currently no way to calibrate the device from Explore Desktop!)
+    requires calibration data to work (there is currently no way to calibrate the device from Explore Desktop!).
     '''
     def __init__(self, ui) -> None:
         self.ui = ui
@@ -103,7 +103,9 @@ void main()
 
 
 class OrientationVisualisationCanvas(app.Canvas):
-    '''Orientation visualiser class using vispy. Based on vispy's rotating cube examples.
+    '''Orientation visualiser class using vispy. Based on vispy's rotating cube examples, using the matrix in the mapped
+    orientation packets from explorepy to set the model matrix of the visualised box. Accuracy of the visualisation
+    depends on this matrix.
     '''
     def __init__(self):
         app.Canvas.__init__(self)
