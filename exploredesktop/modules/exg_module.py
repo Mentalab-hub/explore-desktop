@@ -470,9 +470,6 @@ class ExGPlot(BasePlots):
 
         self.plots_list = [self.ui.plot_exg]
 
-        self.timer = QTimer()
-        self.bt_stability_check_timer = QTimer()
-
     def setup_ui_connections(self) -> None:
         """Setup connections between widgets and slots"""
 
