@@ -347,8 +347,8 @@ class MainWindow(QMainWindow, BaseModel):
         # actionScrollView.triggered.connect(self._init_plots)
 
         self.ui.actionReceive_LSL_Markers.triggered.connect(self.mkr_plot.model.enable_external_markers)
-        # self.ui.actionReceive_LSL_Markers.setVisible(True)
-        # self.ui.actionReceive_LSL_Markers.setChecked(False)
+        self.ui.actionReceive_LSL_Markers.setVisible(True)
+        self.ui.actionReceive_LSL_Markers.setChecked(False)
 
     def _init_plots(self) -> None:
         """Initialize plots"""
