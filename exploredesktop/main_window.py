@@ -140,19 +140,20 @@ class MainWindow(QMainWindow, BaseModel):
         self.settings_frame.setup_ui_connections()
 
         # PLOTS
+
         self.orn_plot = ORNPlot(self.ui)
         self.orn_plot.setup_ui_connections()
+        self.vis_orn = OrientationVisualiser(self.ui)
+        self.ui.horizontal_orientation_layout.setStretch(0, 3)  # Set stretch for ORN plot to 3 (75%)
+        self.ui.horizontal_orientation_layout.setStretch(1, 1)  # Set stretch for ORN vis to 1 (25%)
+
         self.exg_plot = ExGPlot(self.ui, self.filters)
         self.exg_plot.setup_ui_connections()
         self.fft_plot = FFTPlot(self.ui)
         self.mkr_plot = MarkerPlot(self.ui)
         self.mkr_plot.setup_ui_connections()
 
-        self.vis_orn = OrientationVisualiser(self.ui)
-
-        self.ui.horizontal_orientation_layout.setStretch(0, 3)  # Set stretch for ORN plot to 3 (75%)
-        self.ui.horizontal_orientation_layout.setStretch(1, 1)  # Set stretch for ORN vis to 1 (25%)
-
+        self.ui.tabWidget.setCurrentIndex(0)
         self.ui.tabWidget.currentChanged.connect(self.plot_tab_changed)
 
         # RECORDING
