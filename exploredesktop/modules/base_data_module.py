@@ -141,74 +141,18 @@ class DataContainer(BaseModel):
             fft (bool, optional): whether data is for FFT plot. Defaults to False.
         """
         # The parts commented out correspond to the implementation for handling the bluetooth drop
-
-        # if fft is False and data['t'][0] < DataContainer.last_t:
-        #     bt_drop = True
-        # else:
-        #     bt_drop = False
-        bt_drop = False
         n_new_points = self.get_n_new_points(data)
         idxs = np.arange(self.pointer, self.pointer + n_new_points)
 
         if fft is False:
-            # if bt_drop and exg:
-            #     print(f"\n{data['t']=}")
-            #     print(f"{DataContainer.last_t=}")
-            #     a = np.arange(idxs[0] - 10, idxs[-1] + 10)
-            #     try:
-            #         print(f"Before adding: t={self.t_plot_data[a]}")
-            #     except:
-            #         pass
-
-            if bt_drop and exg:
-                # print(f"\n{data['t']=}")
-                # print(f"{DataContainer.last_t=}")
-                # print("drop")
-                # a = np.arange(idxs[0] - 10, idxs[-1] + 10)
-                # try:
-                #   print(f"Before adding: t={self.t_plot_data[a]}")
-                # except:
-                #     pass
-                try:
-                    i = np.where(self.t_plot_data < data['t'][0])[0][-1] + 1
-                    """
-                    Different approach. This one relies on inserting the delay packet on the original position
-                    idxs = np.arange(i, i+n_new_points)
-                    self.t_plot_data = np.insert(self.t_plot_data, idxs, data['t'])
-                    self.t_plot_data = self.t_plot_data[:-len(idxs)]"""
-                    self.pointer = i
-                    idxs = np.arange(self.pointer, self.pointer + n_new_points)
-                    # DataContainer.last_t = data['t'][-1]
-                except IndexError:
-                    print("IndexError - ", np.where(self.t_plot_data < data['t'][0]))
-
-            # Different approach. This one relies on the fact that the time between samples
-            # should be constant (0.004 for 8 chan)
-            # if len(self.t_plot_data[~np.isnan(self.t_plot_data)])>0 \
-            # and data['t'][0] - self.t_plot_data[~np.isnan(self.t_plot_data)][-1] > 0.005:
-            #     data['t'] = np.arange(self.t_plot_data[~np.isnan(self.t_plot_data)][-1], data['t'][0], 0.004)
-            #     idxs = np.arange(self.pointer, len(data['t']))
-
-            # else:
             self.t_plot_data.put(idxs, data['t'], mode='wrap')  # replace values with new points
-
-            # if exg:
-            # if bt_drop and exg:
-            #   try:
-            #     print(f"After adding: t={self.t_plot_data[a]}")
-            #   except:
-            #     pass
-
         for key, val in self.plot_data.items():
-            if bt_drop is True:
+            try:
+                val.put(idxs, data[key], mode='wrap')
+            # KeyError might happen when active channels are changed
+            # if this happens, add nans instead of data coming from packet
+            except KeyError:
                 val.put(idxs, [np.NaN for i in range(n_new_points)], mode='wrap')
-            else:
-                try:
-                    val.put(idxs, data[key], mode='wrap')
-                # KeyError might happen when active chanels are changed
-                # if this happens, add nans instead of data coming from packet
-                except KeyError:
-                    val.put(idxs, [np.NaN for i in range(n_new_points)], mode='wrap')
 
     def update_pointer(self, data: list, signal=None, fft: bool = False) -> None:
         """Update pointer and emit signal
