@@ -140,19 +140,12 @@ class DataContainer(BaseModel):
             data (dict): data to insert
             fft (bool, optional): whether data is for FFT plot. Defaults to False.
         """
-        # The parts commented out correspond to the implementation for handling the bluetooth drop
         n_new_points = self.get_n_new_points(data)
         idxs = np.arange(self.pointer, self.pointer + n_new_points)
-
         if fft is False:
             self.t_plot_data.put(idxs, data['t'], mode='wrap')  # replace values with new points
         for key, val in self.plot_data.items():
-            try:
-                val.put(idxs, data[key], mode='wrap')
-            # KeyError might happen when active channels are changed
-            # if this happens, add nans instead of data coming from packet
-            except KeyError:
-                val.put(idxs, [np.NaN for i in range(n_new_points)], mode='wrap')
+            val.put(idxs, data[key], mode='wrap')
 
     def update_pointer(self, data: list, signal=None, fft: bool = False) -> None:
         """Update pointer and emit signal
