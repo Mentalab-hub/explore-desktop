@@ -551,7 +551,7 @@ class MainWindow(QMainWindow, BaseModel):
             if not self.is_streaming and filt:
                 self._subscribe_callbacks()
                 self.is_streaming = True
-                self.mkr_plot.model.start_lsl_marker_thread()
+                #self.mkr_plot.model.start_lsl_marker_thread()
 
         # Move to page
         self.ui.stackedWidget.setCurrentWidget(btn_page_map[btn_name])
