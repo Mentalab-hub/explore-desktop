@@ -670,9 +670,6 @@ class ExGPlot(BasePlots):
             except KeyError:
                 pass
 
-        # remove reploted markers
-        self.model.signals.mkrRemove.emit(self.model.last_t)
-
         # Remove reploted r_peaks
         to_remove_replot = _remove_old_plot_item(
             self.model.r_peak_replot,
