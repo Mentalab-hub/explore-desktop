@@ -10,7 +10,6 @@ from PySide6.QtCore import (
     Slot
 )
 
-
 from exploredesktop.modules.app_settings import (  # isort:skip
     ConnectionStatus,
     DataAttributes,
@@ -68,9 +67,8 @@ class ExGData(DataContainer):
 
         # start bt drop detection timer
         self.timer = QTimer()
-        self.timer.timeout.connect(self.handle_bt_drop)
-        self.timer.setInterval(1000)
-        self.timer.start()
+        self.timer.timeout.connect(self.data_vis_update)
+
 
     def reset_vars(self) -> None:
         """Reset class variables"""
@@ -78,7 +76,6 @@ class ExGData(DataContainer):
         self.offsets = np.array([])
         self.y_unit = Settings.DEFAULT_SCALE
         self.y_string = '1 mV'
-        # DataContainer.last_t = 0
 
         self.packet_count = 0
         self.t_bt_drop = None
@@ -89,7 +86,7 @@ class ExGData(DataContainer):
         self.r_peak_replot = {'t': [], 'r_peak': [], 'points': []}
         self.rr_warning_displayed = False
 
-        DataContainer.vis_time_offset = None
+        DataContainer.vis_time_offset = 0
         self.pointer = 0
 
     def new_t_axis(self, signal=None):
@@ -155,26 +152,41 @@ class ExGData(DataContainer):
         Args:
             timestamp (list): list of timestamps
         """
-        if self.vis_time_offset is None or timestamp[0] > self.vis_time_offset:
+        if self.vis_time_offset == 0 or timestamp[0] > self.vis_time_offset:
             return
         self.reset_vars()
         self.signals.updateDataAttributes.emit([DataAttributes.DATA])
         self.signals.tRangeEXGChanged.emit(0)
 
-    def handle_bt_drop(self) -> None:
+    def data_vis_update(self) -> None:
         """Handle bluetooth drop
 
         Args:
             data (dict): exg data
             sec_th (int): threshold of seconds to display the warning again. Defaults to 10
         """
-        if self.packet_count == 0 or self.explorer.device_name is None:
-            return
-        if self.explorer.is_bt_link_unstable():
-            self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: ConnectionStatus.UNSTABLE.value})
-        else:
-            connection_label = ConnectionStatus.CONNECTED.value.replace("dev_name", self.explorer.device_name)
-            self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: connection_label})
+        # if self.packet_count == 0 or self.explorer.device_name is None:
+        #     return
+        # if self.explorer.is_bt_link_unstable():
+        #     self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: ConnectionStatus.UNSTABLE.value})
+        # else:
+        #     connection_label = ConnectionStatus.CONNECTED.value.replace("dev_name", self.explorer.device_name)
+        #     self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: connection_label})
+
+        if self.explorer.is_bt_link_unstable() and DataContainer.last_t > 0:
+
+            data_array = np.array([[0] for  i in range(8)])
+            data = dict(zip(reversed(self.explorer.active_chan_list()), data_array))
+            data['t'] = [self.last_t + 1 / self.explorer.sampling_rate]
+            print('last_t is {}'.format(self.last_t))
+            self.update_plot_variables(data)
+
+        try:
+            self.signals.exgChanged.emit([self.t_plot_data, self.plot_data])
+            # RuntimeError might happen when the app closes
+        except RuntimeError as error:
+            logger.debug("RuntimeError: %s", str(error))
+        self.last_exg_t = self.last_t
 
     def callback(self, packet: explorepy.packet.EEG) -> None:
         """Callback to get EEG data
@@ -191,7 +203,7 @@ class ExGData(DataContainer):
 
         # self.handle_disconnection(timestamp)
         # From timestamp to seconds
-        if DataContainer.vis_time_offset is None:
+        if DataContainer.vis_time_offset == 0:
             DataContainer.vis_time_offset = timestamp[0]
 
         time_vector = timestamp - DataContainer.vis_time_offset
@@ -214,18 +226,17 @@ class ExGData(DataContainer):
         data = dict(zip(reversed(chan_list), reversed(exg)))
         data['t'] = time_vector
 
+        self.update_plot_variables(data)
+
+
+        self.packet_count += 1
+
+    def update_plot_variables(self, data):
         self.insert_new_data(data, exg=True)
         self.update_pointer(data)
         self.new_t_axis()
-
         DataContainer.last_t = data['t'][-1]
-        self.packet_count += 1
 
-        try:
-            self.signals.exgChanged.emit([self.t_plot_data, self.plot_data])
-        # RuntimeError might happen when the app closes
-        except RuntimeError as error:
-            logger.debug("RuntimeError: %s", str(error))
 
     def downsampling(self, time_vector, exg, exg_fs):
         """Downsample"""
@@ -466,6 +477,7 @@ class ExGPlot(BasePlots):
         super().__init__(ui)
         self.model = ExGData(filters)
 
+
         self.lines = [None]
 
         self.plots_list = [self.ui.plot_exg]
@@ -532,6 +544,10 @@ class ExGPlot(BasePlots):
 
     def init_plot(self) -> None:
         """Initialize plot"""
+
+        self.model.timer.setInterval(1 / self.model.get_explorer().sampling_rate)
+        self.model.timer.start()
+
         plot_wdgt = self.ui.plot_exg
 
         if self.ui.plot_orn.getItem(0, 0) is not None:
