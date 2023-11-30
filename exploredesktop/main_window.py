@@ -395,7 +395,7 @@ class MainWindow(QMainWindow, BaseModel):
 
         self.signals.updateDataAttributes.connect(self.exg_plot.model.update_attributes)
 
-        self.signals.btDrop.connect(self.exg_plot.display_bt_drop)
+        #self.signals.btDrop.connect(self.exg_plot.display_bt_drop)
 
         self.signals.rrPeakRemove.connect(self.exg_plot.remove_old_r_peak)
         # self.signals.rrPeakPlot.connect(self.exg_plot.plot_rr_point)
