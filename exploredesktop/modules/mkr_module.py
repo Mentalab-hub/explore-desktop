@@ -46,7 +46,7 @@ class MarkerData(DataContainer):
             packet (explorepy.packet.EventMarker): Event marker packet
         """
         timestamp, code = packet.get_data()
-        if DataContainer.vis_time_offset is None:
+        if DataContainer.vis_time_offset == 0:
             DataContainer.vis_time_offset = timestamp[0]
         time_vector = list(np.asarray(timestamp) - DataContainer.vis_time_offset)
         data = [time_vector[0], str(code[0]), False]

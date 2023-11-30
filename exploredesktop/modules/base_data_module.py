@@ -25,7 +25,7 @@ logger = logging.getLogger("explorepy." + __name__)
 class DataContainer(BaseModel):
     """_summary_
     """
-    vis_time_offset = None
+    vis_time_offset = 0
     last_t = 0
 
     def __init__(self) -> None:
@@ -44,7 +44,7 @@ class DataContainer(BaseModel):
 
         self.pointer = 0
 
-        self.vis_time_offset = None
+        self.vis_time_offset = 0
 
         self.timescale = 10
         self.last_t = 0

@@ -78,7 +78,7 @@ class ORNData(DataContainer):
     def callback(self, packet: explorepy.packet.Orientation) -> None:
         """ORN callback"""
         timestamp, orn_data = packet.get_data()
-        if DataContainer.vis_time_offset is None:
+        if DataContainer.vis_time_offset == 0:
             DataContainer.vis_time_offset = timestamp[0]
         time_vector = list(np.asarray(timestamp) - DataContainer.vis_time_offset)
 
