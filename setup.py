@@ -9,12 +9,12 @@ with open('README.md') as readme_file:
     readme = readme_file.read()
 
 requirements = ['PySide6==6.4.1',  # 6.5.2 breaks the footer module
-                'pandas==2.0.3',
+                'pandas==2.1.4',
                 'pyqtgraph==0.13.3',
                 'mne==1.5.0',
                 'explorepy',
-                'scipy==1.11.2',
-                'numpy==1.25.2'
+                'scipy==1.11.4',
+                'numpy==1.26.2'
                 ]
 
 test_requirements = ["pytest",

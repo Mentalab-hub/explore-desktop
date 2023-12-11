@@ -1,4 +1,4 @@
-call conda create -n generate_offline_executable_exploredesktop
+call conda create -n generate_offline_executable_exploredesktop python=3.11.5
 call conda activate generate_offline_executable_exploredesktop
 call conda install pip
 call pip install pyinstaller
