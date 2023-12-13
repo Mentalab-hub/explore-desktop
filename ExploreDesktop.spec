@@ -20,7 +20,7 @@ if sys.platform == "linux" or sys.platform == "linux2":
     # TODO paths should not be hardcoded
     binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-2], 'pylsl/lib'), (liblsl_path[:-2]+'.1.16.0', 'pylsl/lib')]
 elif sys.platform == "darwin":
-    pass
+    binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-5]+'1.15.2.dylib', 'pylsl/lib')]
 elif sys.platform == "win32":
     binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-7], 'pylsl/lib')]
 

@@ -8,9 +8,9 @@ from setuptools import (
 with open('README.md') as readme_file:
     readme = readme_file.read()
 
-requirements = ['PySide6==6.2.1',
+requirements = ['PySide6==6.2.2',
                 'pandas==1.3.4',
-                'pyqtgraph==0.12.3 ',
+                'pyqtgraph',
                 'mne==0.24.1',
                 'explorepy',
                 'scipy==1.10.0',
