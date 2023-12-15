@@ -29,11 +29,12 @@ if sys.platform == "linux" or sys.platform == "linux2":
 elif sys.platform == "darwin":
     binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-5]+'1.15.2.dylib', 'pylsl/lib')]
 elif sys.platform == "win32":
-    binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-7], 'pylsl/lib')]
+    #binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-7], 'pylsl/lib')]
+    binaries = None
 
 a = Analysis([main_path],
              pathex=[get_python_lib()],
-             binaries=[],
+             binaries=binaries,
              datas=[],
              hiddenimports=[],
              hookspath=[],
