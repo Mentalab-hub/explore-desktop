@@ -80,16 +80,24 @@ jobs:
         run: binarycreator.exe -c ${{ env.config_path }} -p ${{ env.package_path }} --verbose ExploreDesktopInstallerOffline.exe
       - name: Generate installer for macOS
         if: matrix.os == 'macos-latest'
-        run: binarycreator -c ${{ env.config_path }} -p ${{ env.package_path }} --verbose ExploreDesktopInstallerOffline.run
+        run: |
+          mkdir out
+          binarycreator -c ${{ env.config_path }} -p ${{ env.package_path }} --verbose ./out/ExploreDesktopInstallerOffline.run
       - name: Upload installer for Windows
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v3
         with:
           name: exploredesktop-installer-windows
           path: ExploreDesktopInstallerOffline.exe
+      - name: View files for macOS
+        if: matrix.os == 'macos-latest'
+        run: ls
+      - name: Try to zip files for macOS
+        if: matrix.os == 'macos-latest'
+        run: zip -r out.zip out/*
       - name: Upload installer for macOS
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v3
         with:
           name: exploredesktop-installer-mac
-          path: ExploreDesktopInstallerOffline.run
+          path: out.zip
