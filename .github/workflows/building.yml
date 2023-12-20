@@ -12,13 +12,13 @@ env:
   config_path: 'installer/ExploreDesktopInstaller/ExploreDesktop/config/config.xml'
   package_path: 'installer/ExploreDesktopInstaller/ExploreDesktop/packages'
   usedevelop: 'true'
+  usemacdevelop: 'true'
 jobs:
   build:
     if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
-        #os: [ windows-latest, macos-latest ]
-        os: [macos-latest]
+        os: [ windows-latest, macos-latest ]
         python: [ 3.11.5 ]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -29,11 +29,6 @@ jobs:
           fetch-depth: 0
       - name: Switch to current branch
         run: git checkout ${{ env.BRANCH }}
-      - name: Install non-python dependencies on Ubuntu
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install libbluetooth-dev -y
       - name: Set up Python ${{ matrix.python }}
         uses: s-weigand/setup-conda@v1
         with:
@@ -69,7 +64,7 @@ jobs:
           pip uninstall -y explorepy
           pip install git+https://github.com/Mentalab-hub/explorepy.git@develop
       - name: Use macOS develop branch if on macOS
-        if: matrix.os == 'macos-latest'
+        if: ${{ env.usemacdevelop == 'true' }} && matrix.os == 'macos-latest'
         run: |
           pip uninstall -y explorepy
           pip install git+https://github.com/Mentalab-hub/explorepy.git@feature-mac-dev
@@ -89,15 +84,12 @@ jobs:
         with:
           name: exploredesktop-installer-windows
           path: ExploreDesktopInstallerOffline.exe
-      - name: View files for macOS
+      - name: Zip files for macOS
         if: matrix.os == 'macos-latest'
-        run: ls
-      - name: Try to zip files for macOS
-        if: matrix.os == 'macos-latest'
-        run: zip -r out.zip out/*
+        run: zip -r ExploreDesktopInstallerOffline.zip out/*
       - name: Upload installer for macOS
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v3
         with:
           name: exploredesktop-installer-mac
-          path: out.zip
+          path: ExploreDesktopInstallerOffline.zip
