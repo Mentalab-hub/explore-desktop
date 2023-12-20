@@ -27,15 +27,14 @@ liblsl_path = next(pylsl.pylsl.find_liblsl_libraries())
 liblsl_dir = os.path.dirname(liblsl_path)
 liblsl_v = pylsl.pylsl.library_version()
 
-liblsl_dylib = os.path.join(liblsl_dir, 'liblsl.dylib')
-liblsl_dylib_major_minor = glob.glob(os.path.join(liblsl_dir, f'liblsl.{liblsl_v//100}.{liblsl_v%100}.*.dylib'))[0]
-
 if sys.platform == "linux" or sys.platform == "linux2":
     # TODO paths should not be hardcoded
     binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-2], 'pylsl/lib'), (liblsl_path[:-2]+'.1.16.0', 'pylsl/lib')]
 #elif sys.platform == "darwin":
 #    binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-5]+'1.16.2.dylib', 'pylsl/lib')]
 elif sys.platform == "darwin":
+    liblsl_dylib = os.path.join(liblsl_dir, 'liblsl.dylib')
+    liblsl_dylib_major_minor = glob.glob(os.path.join(liblsl_dir, f'liblsl.{liblsl_v//100}.{liblsl_v%100}.*.dylib'))[0]
     binaries = [(liblsl_dylib, 'pylsl/lib'),
                 (liblsl_dylib_major_minor, 'pylsl/lib')]
 elif sys.platform == "win32":
