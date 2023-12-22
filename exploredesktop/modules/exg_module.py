@@ -193,6 +193,9 @@ class ExGData(DataContainer):
         # From timestamp to seconds
         if DataContainer.vis_time_offset is None:
             DataContainer.vis_time_offset = timestamp[0]
+        if self.packet_count % 2 == 0 and DataContainer.last_t > 0:
+            self.packet_count += 1
+            return
 
         time_vector = timestamp - DataContainer.vis_time_offset
 

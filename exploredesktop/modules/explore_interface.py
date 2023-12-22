@@ -28,9 +28,9 @@ class ExploreInterface(Explore):
 
     def __init__(self):
         super().__init__()
-        self.device_chan = None
+        self.device_chan = 8
         self.chan_dict_list = []
-        self.chan_mask = "1111"
+        self.chan_mask = "11111111"
         self.settings = None
         self.record_filename = ""
         self.filters = {}
