@@ -7,6 +7,8 @@ import mne
 import eeglabio
 from distutils.sysconfig import get_python_lib
 
+import glob
+
 global DISTPATH
 
 icon_base_path = path.join(".", "installer", "ExploreDesktopInstaller", "ExploreDesktop", "packages", "com.Mentalab.ExploreDesktop", "extras")
@@ -20,20 +22,25 @@ else:
 
 block_cipher = None
 main_path = path.join('exploredesktop', 'main.py')
-liblsl_path = next(pylsl.pylsl.find_liblsl_libraries())
 
+liblsl_path = next(pylsl.pylsl.find_liblsl_libraries())
+liblsl_dir = os.path.dirname(liblsl_path)
+liblsl_v = pylsl.pylsl.library_version()
 
 if sys.platform == "linux" or sys.platform == "linux2":
     # TODO paths should not be hardcoded
     binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-2], 'pylsl/lib'), (liblsl_path[:-2]+'.1.16.0', 'pylsl/lib')]
 elif sys.platform == "darwin":
-    binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-5]+'1.15.2.dylib', 'pylsl/lib')]
+    liblsl_dylib = os.path.join(liblsl_dir, 'liblsl.dylib')
+    liblsl_dylib_major_minor = glob.glob(os.path.join(liblsl_dir, f'liblsl.{liblsl_v//100}.{liblsl_v%100}.*.dylib'))[0]
+    binaries = [(liblsl_dylib, 'pylsl/lib'),
+                (liblsl_dylib_major_minor, 'pylsl/lib')]
 elif sys.platform == "win32":
-    binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-7], 'pylsl/lib')]
+    binaries = None
 
 a = Analysis([main_path],
              pathex=[get_python_lib()],
-             binaries=[],
+             binaries=binaries,
              datas=[],
              hiddenimports=[],
              hookspath=[],
