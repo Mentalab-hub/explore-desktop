@@ -156,7 +156,7 @@ class FFTPlot(BasePlots):
         if self.timer.isActive():
             return
         # NOTE Change value to control refresh rate (im msec)
-        refresh_rate = 2000  # msec
+        refresh_rate = 500  # msec
         self.timer.setInterval(refresh_rate)
         self.timer.timeout.connect(self.plot)
         self.timer.start()
