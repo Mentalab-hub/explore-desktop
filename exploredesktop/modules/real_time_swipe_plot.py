@@ -5,6 +5,7 @@ import numpy as np
 
 import explorepy
 from explorepy.stream_processor import TOPICS
+from explorepy.settings_manager import SettingsManager
 from vispy import app
 from vispy import gloo
 from vispy.util import keys
@@ -15,7 +16,7 @@ gloo.gl.use_gl('gl+')
 class CircularBufferPadded:
     def __init__(self, max_length, dtype=np.float32):
         self.max_length = max_length
-        self.buffer = np.empty(self.max_length*2, dtype=dtype)
+        self.buffer = np.empty(self.max_length * 2, dtype=dtype)
         self.length = 0
         self.index_first = 0
         self.index_last = 0
@@ -23,24 +24,24 @@ class CircularBufferPadded:
     def view_end(self, length, offset=0):
         # Rollover for reading isn't possible, so this doesn't have to be taken into account
         if (length + offset) < self.length:
-            return self.buffer[self.index_last-length-offset:self.index_last-offset]
+            return self.buffer[self.index_last - length - offset:self.index_last - offset]
         elif length < self.length:
             return self.buffer[self.index_first:self.index_first + length]
         else:
             return self.buffer[self.index_first:self.index_last]
 
     def insert_iterating(self, chunk):
-        # Slicing the chunk correctly may be faster than enumerating but increases complexity
+        # TODO: Slicing the chunk correctly may be faster than enumerating but increases complexity
         for it, element in enumerate(chunk):
             loc = (self.index_last + it) % self.max_length
             self.buffer[loc] = element
-            self.buffer[loc+self.max_length] = element
+            self.buffer[loc + self.max_length] = element
         self.length = min(self.length + len(chunk), self.max_length)
-        self.index_last = (self.index_last + len(chunk)) % (self.max_length*2)
-        self.index_first = (self.index_last - self.length) % (self.max_length*2)
+        self.index_last = (self.index_last + len(chunk)) % (self.max_length * 2)
+        self.index_first = (self.index_last - self.length) % (self.max_length * 2)
         if self.index_first >= self.index_last:
-            self.index_last = (self.index_last + self.max_length) % (self.max_length*2)
-            self.index_first = (self.index_first + self.max_length) % (self.max_length*2)
+            self.index_last = (self.index_last + self.max_length) % (self.max_length * 2)
+            self.index_first = (self.index_first + self.max_length) % (self.max_length * 2)
 
     def get_all_info(self):
         return f"{np.array2string(self.buffer)}\n" \
@@ -65,7 +66,40 @@ class CircularBufferPadded:
 
 
 class ExploreDataHandlerCircularBuffer:
-    def __init__(self, dev_name):
+    _valid_channels = [4, 8, 16, 32]
+
+    def __init__(self, dev_name, interface=None):
+        self.dev_name = dev_name
+        self.interface = interface
+        self.is_connected = False
+        if self.interface:
+            self.explore_device = interface
+            self.dev_name = self.explore_device.device_name
+        else:
+            self.explore_device = explorepy.Explore()
+            self.explore_device.connect(self.dev_name)
+
+        self.current_sr = 0
+        self.max_channels = 0
+        self.packet_length = 0
+        self.max_length = 0
+        self.max_length_markers = 0
+
+        self.max_duration = 60 * 60  # in seconds
+
+        self.moving_average_window = 200
+        self.time_offset = 0
+
+        self.channels = {}
+        self.baselines = {}
+
+        self.timestamps = None
+        self.markers = None
+        self.timestamps_markers = None
+
+        if self.explore_device.is_connected:
+            self.is_connected = True
+            self.setup_buffers()
 
         self.callbacks = {
             TOPICS.raw_ExG: [self.handle_exg],
@@ -73,35 +107,47 @@ class ExploreDataHandlerCircularBuffer:
             TOPICS.marker: [self.handle_marker]
         }
 
-        self.dev_name = dev_name
-        self.explore_device = explorepy.Explore()
-        self.explore_device.connect(self.dev_name)
+    def on_connected(self):
+        self.is_connected = True
+        self.dev_name = self.explore_device.device_name
+        self.setup_buffers()
+        self.subscribe_packet_callbacks()
 
-        self.max_duration = 60 * 60  # in seconds
-        self.max_channels = 32  # hardcoded for now
+    def on_disconnected(self):
+        self.is_connected = False
+        self.dev_name = None
+        self.unsubscribe_packet_callbacks()
+        self.clear_buffers()
 
-        self.current_sr = 250  # hardcoded for now
-        self.packet_length = 4  # hardcoded for now
-
-        self.max_length = self.current_sr * self.max_duration
-        self.max_length_markers = self.max_duration * 30
-
-        self.moving_average_window = 200
-
-        self.timestamp_iterator = 0
-
-        self.time_offset = 0
-
+    def clear_buffers(self):
         self.channels = {}
         self.baselines = {}
+
+        self.timestamps = None
+        self.markers = None
+        self.timestamps_markers = None
+
+        self.current_sr = 0
+        self.max_channels = 0
+        self.packet_length = 0
+        self.max_length = 0
+        self.max_length_markers = 0
+
+    def setup_buffers(self):
+        self.current_sr = int(self.explore_device.stream_processor.device_info['sampling_rate'])
+        self.max_channels = SettingsManager(self.dev_name).get_channel_count()
+        self.packet_length = self.get_packet_length()  # requires max_channels to be set
+
+        self.max_length = self.current_sr * self.max_duration
+        self.max_length_markers = self.max_duration * 30  # 30 markers per second
+
         for i in range(self.max_channels):
             self.channels[i] = CircularBufferPadded(self.max_length, dtype=np.float32)
             self.baselines[i] = 0
+
         self.timestamps = CircularBufferPadded(self.max_length, dtype=np.float32)
         self.markers = CircularBufferPadded(self.max_length_markers, dtype='<U10')
         self.timestamps_markers = CircularBufferPadded(self.max_length_markers, dtype=np.float32)
-
-        self.subscribe_packet_callbacks()
 
     def subscribe_packet_callbacks(self):
         self.sub_unsub_packet_callbacks(sp_callback=self.explore_device.stream_processor.subscribe)
@@ -123,8 +169,8 @@ class ExploreDataHandlerCircularBuffer:
             ch = packet.data[i]
             self.baselines[i] = self.baselines[i] * 0.8 + sum(ch) / len(ch) * 0.2
             self.channels[i].insert_iterating(ch)
-        #timestamps = np.linspace(now - 0.012, now, 16)
-        timestamps = np.linspace(now - 1/self.current_sr*(self.packet_length-1), now, self.packet_length)
+        # timestamps = np.linspace(now - 0.012, now, 16)
+        timestamps = np.linspace(now - 1 / self.current_sr * (self.packet_length - 1), now, self.packet_length)
         self.timestamps.insert_iterating(timestamps)
 
     def handle_orn(self, packet):
@@ -143,7 +189,7 @@ class ExploreDataHandlerCircularBuffer:
     def get_channel_and_time(self, channel, duration, offset=0):
         # TODO: write a version that gets *all* channels*
         num_values = duration * self.current_sr
-        #current_index = self.channels[channel].get_length() % num_values
+        # current_index = self.channels[channel].get_length() % num_values
         if offset == 0:
             current_index = self.channels[channel].get_last_index() % num_values
         else:
@@ -152,6 +198,11 @@ class ExploreDataHandlerCircularBuffer:
                self.timestamps.view_end(num_values, offset=offset), \
                self.baselines[channel], \
                current_index
+
+    def get_packet_length(self):
+        return 4 if (self.max_channels == 32 or self.max_channels == 16) \
+            else 16 if self.max_channels == 8 \
+            else 33
 
     def get_last_index(self, channel):
         return self.channels[channel].get_last_index()
@@ -286,7 +337,7 @@ out vec4 frag_color;
 
 void main()
 {
-    gl_FragColor = vec4(0.6, 0.6, 0.6, 1.0);
+    gl_FragColor = vec4(0.3, 0.3, 0.4, 1.0);
 }
 """
 
@@ -319,7 +370,6 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.avg_refresh_time = 0
         self.avg_refresh_time_iterator = 0
 
-        self.explore_data_handler = explore_data_handler
         self.timer_iterator = 0
 
         self.duration = 10  # in s
@@ -327,17 +377,12 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         self.scroll_activated_at = -1
 
-        self.num_plots = self.explore_data_handler.get_num_plots()
-
         self.min_time_window = 0.5
         self.min_y_scale = 1
 
         self.translate_back = 0
 
         self.programs = []
-        for i in range(self.num_plots):
-            self.programs.append(gloo.Program(vertex_explore_swipe, fragment_explore_swipe))
-
         self.marker_program = gloo.Program()
         self.marker_program.set_shaders(vert=vertex_explore_marker, frag=frag_explore_marker,
                                         geom=geometry_explore_marker)
@@ -346,6 +391,34 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.swipe_line_program = gloo.Program()
         self.swipe_line_program.set_shaders(vert=vertex_explore_swipe_line, frag=fragment_explore_swipe_line,
                                             geom=geometry_explore_swipe_line)
+
+        self.timer = app.Timer("auto", self.on_timer, start=False)
+
+        self.is_visible = False
+
+        self.num_plots = 0
+        self.x_coords = np.array(0, dtype=np.float32)
+
+        self.explore_data_handler = explore_data_handler
+        if self.explore_data_handler.is_connected:
+            self.setup_programs_and_plots()
+            self.timer.start()
+
+    def on_connected(self):
+        self.setup_programs_and_plots()
+        self.timer.start()
+
+    def on_disconnected(self):
+        self.clear_programs_and_plots()
+        self.timer.stop()
+        self.is_visible = False
+
+    def setup_programs_and_plots(self):
+        self.num_plots = self.explore_data_handler.get_num_plots()
+
+        for i in range(self.num_plots):
+            self.programs.append(gloo.Program(vertex_explore_swipe, fragment_explore_swipe))
+
         self.swipe_line_program['x_range'] = self.duration * self.explore_data_handler.get_current_sr()
 
         self.x_coords = np.arange(self.duration * self.explore_data_handler.get_current_sr()).astype(np.float32)
@@ -359,9 +432,10 @@ class SwipePlotExploreCanvas(app.Canvas):
             self.programs[i]['plot_index'] = i
             self.programs[i]['num_plots'] = self.num_plots
 
-        self.timer = app.Timer("auto", self.on_timer, start=True)
-
-        self.is_visible = False
+    def clear_programs_and_plots(self):
+        self.num_plots = 0
+        self.x_coords = np.array(0, dtype=np.float32)
+        self.programs = []
 
     def set_y_scale(self, y_scale):
         '''
@@ -394,21 +468,24 @@ class SwipePlotExploreCanvas(app.Canvas):
         gloo.set_viewport(0, 0, *event.size)
 
     def on_draw(self, event):
+        # TODO: fix marker plotting
         gloo.clear(self.background_colour)
+        if not self.is_visible:
+            return
         for i in range(self.num_plots):
             self.programs[i].draw('line_strip')
-        self.marker_program.draw('points')
+        self.marker_program.draw('points')  # Note: the marker positions in the plot are currently incorrect
         self.swipe_line_program.draw('points')
 
     def on_key_press(self, event):
         if event.key == keys.LEFT:
-            self.set_x_scale(x_scale=(self.duration+5))
+            self.set_x_scale(x_scale=(self.duration + 5))
         elif event.key == keys.RIGHT:
-            self.set_x_scale(x_scale=(self.duration-5))
+            self.set_x_scale(x_scale=(self.duration - 5))
         elif event.key == keys.UP:
-            self.set_y_scale(y_scale=((self.y_range/2)+10))
+            self.set_y_scale(y_scale=((self.y_range / 2) + 10))
         elif event.key == keys.DOWN:
-            self.set_y_scale(y_scale=((self.y_range/2)-10))
+            self.set_y_scale(y_scale=((self.y_range / 2) - 10))
         self.update()
 
     def on_mouse_wheel(self, event):
@@ -417,7 +494,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         if self.scroll_activated_at >= 0:
             self.translate_back += self.explore_data_handler.get_distance(channel, self.scroll_activated_at)
         self.translate_back = min(self.translate_back,
-                                  self.explore_data_handler.get_length(channel) - self.duration * self.explore_data_handler.current_sr)
+                                  self.explore_data_handler.get_length(
+                                      channel) - self.duration * self.explore_data_handler.current_sr)
         self.translate_back = max(self.translate_back, 0)
         if self.translate_back == 0:
             self.scroll_activated_at = -1
@@ -429,8 +507,9 @@ class SwipePlotExploreCanvas(app.Canvas):
             additional_offset = 0
             if self.scroll_activated_at >= 0:
                 additional_offset = self.explore_data_handler.get_distance(0, self.scroll_activated_at)
-            y, x, baseline, current_index =\
-                self.explore_data_handler.get_channel_and_time(i, self.duration, offset=self.translate_back+additional_offset)
+            y, x, baseline, current_index = \
+                self.explore_data_handler.get_channel_and_time(i, self.duration,
+                                                               offset=self.translate_back + additional_offset)
             if len(x) < 2:
                 return
 
@@ -459,12 +538,22 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.avg_refresh_time_iterator += 1
         self.avg_refresh_time /= self.avg_refresh_time_iterator
         if self.avg_refresh_time_iterator % 30 == 0:
-            print(f"Average elapsed time for on_timer: {self.avg_refresh_time*1000}ms")
+            print(f"Average elapsed time for on_timer: {self.avg_refresh_time * 1000}ms")
+
+
+class EXGPlotVispy:
+    def __init__(self, ui, explore_interface) -> None:
+        self.ui = ui
+        self.explore_handler = ExploreDataHandlerCircularBuffer(dev_name=None, interface=explore_interface)
+        self.c = SwipePlotExploreCanvas(self.explore_handler)
+        self.ui.horizontalLayout_21.addWidget(self.c.native)
 
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         device_name = sys.argv[1]
+    else:
+        device_name = "Explore_8539"
     explore_handler = ExploreDataHandlerCircularBuffer(dev_name=device_name)
     c = SwipePlotExploreCanvas(explore_data_handler=explore_handler)
     app.run()
