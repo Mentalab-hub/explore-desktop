@@ -10,6 +10,8 @@ from vispy import app
 from vispy import gloo
 from vispy.util import keys
 
+from exploredesktop.modules import Settings
+
 gloo.gl.use_gl('gl+')
 
 
@@ -102,7 +104,8 @@ class ExploreDataHandlerCircularBuffer:
             self.setup_buffers()
 
         self.callbacks = {
-            TOPICS.raw_ExG: [self.handle_exg],
+            #TOPICS.raw_ExG: [self.handle_exg],
+            TOPICS.filtered_ExG: [self.handle_exg],
             TOPICS.raw_orn: [],
             TOPICS.marker: [self.handle_marker]
         }
@@ -360,7 +363,7 @@ void main(void) {
 
 
 class SwipePlotExploreCanvas(app.Canvas):
-    def __init__(self, explore_data_handler):
+    def __init__(self, explore_data_handler, y_scale=100, x_scale=10):
         super(SwipePlotExploreCanvas, self).__init__()
 
         self.background_colour = (0.2, 0.2, 0.3, 1.0)
@@ -372,8 +375,8 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         self.timer_iterator = 0
 
-        self.duration = 10  # in s
-        self.y_range = 200  # range for y in uV
+        self.duration = x_scale  # in s
+        self.y_range = y_scale*2  # range for y in uV
 
         self.scroll_activated_at = -1
 
@@ -478,6 +481,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.swipe_line_program.draw('points')
 
     def on_key_press(self, event):
+        return  # switched off for now
         if event.key == keys.LEFT:
             self.set_x_scale(x_scale=(self.duration + 5))
         elif event.key == keys.RIGHT:
@@ -519,7 +523,8 @@ class SwipePlotExploreCanvas(app.Canvas):
             else:
                 self.programs[i]['pos_x'] = self.x_coords
             self.programs[i]['pos_y'] = new_y
-            self.programs[i]['baseline'] = baseline
+            #self.programs[i]['baseline'] = baseline
+            self.programs[i]['baseline'] = 0
         _, timestamps_markers = self.explore_data_handler.get_markers()
         start_index = np.searchsorted(timestamps_markers, x[0])
         found_timestamps = timestamps_markers[start_index:]
@@ -545,8 +550,26 @@ class EXGPlotVispy:
     def __init__(self, ui, explore_interface) -> None:
         self.ui = ui
         self.explore_handler = ExploreDataHandlerCircularBuffer(dev_name=None, interface=explore_interface)
-        self.c = SwipePlotExploreCanvas(self.explore_handler)
+        self.c = SwipePlotExploreCanvas(self.explore_handler, y_scale=Settings.DEFAULT_SCALE, x_scale=Settings.WIN_LENGTH)
         self.ui.horizontalLayout_21.addWidget(self.c.native)
+
+    def on_connected(self):
+        self.explore_handler.on_connected()
+        self.c.on_connected()
+
+    def on_disconnected(self):
+        self.explore_handler.on_disconnected()
+        self.c.on_disconnected()
+
+    def change_scale(self, new_val):
+        self.c.set_y_scale(Settings.SCALE_MENU_VISPY[new_val])
+
+    def change_timescale(self, new_val):
+        self.c.set_x_scale(int(Settings.TIME_RANGE_MENU[new_val]))
+
+    def setup_ui_connections(self):
+        self.ui.value_yAxis.currentTextChanged.connect(self.change_scale)
+        self.ui.value_timeScale.currentTextChanged.connect(self.change_timescale)
 
 
 if __name__ == '__main__':

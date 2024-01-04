@@ -144,6 +144,7 @@ class MainWindow(QMainWindow, BaseModel):
         self.orn_plot.setup_ui_connections()
         #self.exg_plot = ExGPlot(self.ui, self.filters)
         self.exg_plot_vispy = EXGPlotVispy(self.ui, self.explorer)
+        self.exg_plot_vispy.setup_ui_connections()
         #self.exg_plot.setup_ui_connections()
         self.fft_plot = FFTPlot(self.ui)
         #self.mkr_plot = MarkerPlot(self.ui)
@@ -217,13 +218,11 @@ class MainWindow(QMainWindow, BaseModel):
 
         if connection == ConnectionStatus.CONNECTED:
             btn_connect_text, btn_scan_enabled = self.on_connect()
-            self.exg_plot_vispy.explore_handler.on_connected()
-            self.exg_plot_vispy.c.on_connected()
+            self.exg_plot_vispy.on_connected()
 
         elif connection == ConnectionStatus.DISCONNECTED:
             btn_connect_text, btn_scan_enabled = self.on_disconnect()
-            self.exg_plot_vispy.explore_handler.on_disconnected()
-            self.exg_plot_vispy.c.on_disconnected()
+            self.exg_plot_vispy.on_disconnected()
 
         else:
             return
