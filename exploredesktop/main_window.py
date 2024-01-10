@@ -142,13 +142,15 @@ class MainWindow(QMainWindow, BaseModel):
         # PLOTS
         self.orn_plot = ORNPlot(self.ui)
         self.orn_plot.setup_ui_connections()
+
         #self.exg_plot = ExGPlot(self.ui, self.filters)
+
         self.exg_plot_vispy = EXGPlotVispy(self.ui, self.explorer)
         self.exg_plot_vispy.setup_ui_connections()
         #self.exg_plot.setup_ui_connections()
         self.fft_plot = FFTPlot(self.ui)
-        #self.mkr_plot = MarkerPlot(self.ui)
-        #self.mkr_plot.setup_ui_connections()
+        self.mkr_plot = MarkerPlot(self.ui)
+        self.mkr_plot.setup_ui_connections()
 
         self.ui.tabWidget.currentChanged.connect(self.plot_tab_changed)
 

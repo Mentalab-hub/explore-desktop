@@ -104,7 +104,7 @@ class ExploreDataHandlerCircularBuffer:
             self.setup_buffers()
 
         self.callbacks = {
-            #TOPICS.raw_ExG: [self.handle_exg],
+            # TOPICS.raw_ExG: [self.handle_exg],
             TOPICS.filtered_ExG: [self.handle_exg],
             TOPICS.raw_orn: [],
             TOPICS.marker: [self.handle_marker]
@@ -164,35 +164,35 @@ class ExploreDataHandlerCircularBuffer:
                 sp_callback(callback=callback, topic=topic)
 
     def handle_exg(self, packet):
-        now = time.time() - self.time_offset
+        timestamps, channels = packet.get_data(exg_fs=self.current_sr)
         if self.time_offset == 0:
-            self.time_offset = now
-            now = 0.0
-        for i in range(self.max_channels):
-            ch = packet.data[i]
-            self.baselines[i] = self.baselines[i] * 0.8 + sum(ch) / len(ch) * 0.2
-            self.channels[i].insert_iterating(ch)
-        # timestamps = np.linspace(now - 0.012, now, 16)
-        timestamps = np.linspace(now - 1 / self.current_sr * (self.packet_length - 1), now, self.packet_length)
+            self.time_offset = timestamps[0]
+
+        timestamps = timestamps - self.time_offset
+        for i in range(len(channels)):
+            self.baselines[i] = self.baselines[i] * 0.8 + sum(channels[i]) / len(channels[i]) * 0.2
+            self.channels[i].insert_iterating(channels[i])
         self.timestamps.insert_iterating(timestamps)
 
     def handle_orn(self, packet):
         raise NotImplementedError
 
     def handle_marker(self, packet):
-        now = time.time() - self.time_offset
+        timestamp, marker_string = packet.get_data()
+        print(f"Got marker with ts: {timestamp}")
         if self.time_offset == 0:
-            self.time_offset = now
-            now = 0.0
-        timestamp = [now]
-        _, marker_string = packet.get_data()
-        self.markers.insert_iterating(marker_string)
-        self.timestamps_markers.insert_iterating(timestamp)
+            self.time_offset = timestamp
+        timestamp = timestamp - self.time_offset
+        print(f"Timestamp with offset subtracted is: {timestamp}")
+        if timestamp <= self.timestamps_markers.view_end(0):
+            print(f"Marker timestamp in the past, last: {self.markers.view_end(0)}, new: {timestamp}")
+        else:
+            self.markers.insert_iterating(marker_string)
+            self.timestamps_markers.insert_iterating(timestamp)
 
     def get_channel_and_time(self, channel, duration, offset=0):
         # TODO: write a version that gets *all* channels*
         num_values = duration * self.current_sr
-        # current_index = self.channels[channel].get_length() % num_values
         if offset == 0:
             current_index = self.channels[channel].get_last_index() % num_values
         else:
@@ -201,6 +201,20 @@ class ExploreDataHandlerCircularBuffer:
                self.timestamps.view_end(num_values, offset=offset), \
                self.baselines[channel], \
                current_index
+
+    def get_all_channels_and_time(self, duration, offset=0):
+        num_values = duration * self.current_sr
+        all_channels = [None for _ in range(len(self.channels))]
+        if offset == 0:
+            current_index = self.channels[0].get_last_index() % num_values
+        else:
+            current_index = 0
+
+        timestamps = self.timestamps.view_end(num_values, offset=offset)
+        for i in range(len(self.channels)):
+            all_channels[i] = self.channels[i].view_end(num_values, offset=offset)
+
+        return all_channels, timestamps, self.baselines, current_index
 
     def get_packet_length(self):
         return 4 if (self.max_channels == 32 or self.max_channels == 16) \
@@ -228,6 +242,55 @@ class ExploreDataHandlerCircularBuffer:
     def get_num_plots(self):
         return self.max_channels
 
+
+vertex_explore_swipe_new = """
+    // Remember: positions (x and y) have to be in [-1;1]
+
+    uniform float vertical_padding;
+
+    uniform vec4 line_colour;
+    uniform vec4 line_colour_highlighted;
+
+    uniform float plot_index;
+    uniform float num_plots;
+    
+    uniform bool is_scrolling;
+
+    uniform float x_length;
+    uniform float y_range;
+
+    uniform float baseline;
+    uniform float x_min;
+
+    attribute float pos_x;
+    attribute float pos_y;
+
+    varying vec4 v_col;
+
+    void main() {
+        float new_x;
+        if(!is_scrolling) {
+            new_x = (mod(pos_x, x_length) / x_length) * 2.0f - 1.0;
+        } else {
+            new_x = ((pos_x - x_min) / x_length) * 2.0 - 1.0;
+        }
+
+        float plot_range = (2.0f - 2.0f * vertical_padding) / num_plots;  // height available per plot
+
+        float new_y = pos_y - baseline;
+        new_y = new_y / y_range / 2.0f;  // all values in [-1;1], max_y = 1.0, min_y = -1.0
+
+        // Move y coordinate to the correct location according to plot index, amount of plots and vertical padding
+        new_y = new_y * plot_range * 0.5f;
+        new_y = new_y + 1.0f;
+        new_y = new_y - 0.5f * plot_range;
+        new_y = new_y - vertical_padding;
+        new_y = new_y - plot_index * plot_range;
+
+        v_col = line_colour;
+        gl_Position = vec4(new_x, new_y, 0.0, 1.0);
+    }
+    """
 
 vertex_explore_swipe = """
     // Remember: positions (x and y) have to be in [-1;1]
@@ -282,11 +345,19 @@ vertex_explore_marker = """
     #version 330
 
     in float x_range;
+    uniform float x_min;
+    uniform bool is_scrolling;
 
     in float pos_x;
 
     void main(void) {
-        float new_x = ((pos_x - (int(pos_x / x_range) * x_range)) / x_range - 0.5f) * 2.0f;
+        //float new_x = ((pos_x - (int(pos_x / x_range) * x_range)) / x_range - 0.5f) * 2.0f;
+        float new_x;
+        if(!is_scrolling) {
+            new_x = (mod(pos_x, x_range) / x_range) * 2.0f - 1.0;
+        } else {
+            new_x = ((pos_x - x_min) / x_range) * 2.0 - 1.0;
+        }
         gl_Position = vec4(new_x, 0.0, 0.0, 1.0);
     }
     """
@@ -323,12 +394,14 @@ vertex_explore_swipe_line = """
     #version 330
 
     in float x_range;
+    in float x_length;
 
     in float pos_x;
 
     void main(void) {
         //float new_x = ((pos_x - (int(pos_x / x_range) * x_range)) / x_range - 0.5f) * 2.0f;
-        float new_x = (pos_x / x_range - 0.5f) * 2.0f;
+        float new_x = (mod(pos_x, x_length) / x_length) * 2.0f - 1.0;
+        //float new_x = (pos_x / x_range - 0.5f) * 2.0f;
         gl_Position = vec4(new_x, 0.0, 0.0, 1.0);
     }
     """
@@ -364,7 +437,17 @@ void main(void) {
 
 class SwipePlotExploreCanvas(app.Canvas):
     def __init__(self, explore_data_handler, y_scale=100, x_scale=10):
+        # TODO: Test circular buffer boundaries
+        # TODO: Make sure datahandler returns...
+        #  * potentially the index buffer
+        # TODO: Make code more efficient and readable (i.e. reuse shader if possible)
         super(SwipePlotExploreCanvas, self).__init__()
+        print("Called init on canvas")
+        #self.measure_fps()
+
+        self.ts_last_print = 0
+
+        self.timestamp_scale = 10000
 
         self.background_colour = (0.2, 0.2, 0.3, 1.0)
         self.line_colour = (0.6, 0.6, 0.8, 1.0)
@@ -376,7 +459,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.timer_iterator = 0
 
         self.duration = x_scale  # in s
-        self.y_range = y_scale*2  # range for y in uV
+        self.y_range = y_scale * 2  # range for y in uV
 
         self.scroll_activated_at = -1
 
@@ -384,8 +467,10 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.min_y_scale = 1
 
         self.translate_back = 0
+        self.is_scrolling = False
 
         self.programs = []
+
         self.marker_program = gloo.Program()
         self.marker_program.set_shaders(vert=vertex_explore_marker, frag=frag_explore_marker,
                                         geom=geometry_explore_marker)
@@ -400,7 +485,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.is_visible = False
 
         self.num_plots = 0
-        self.x_coords = np.array(0, dtype=np.float32)
+        self.x_coords = np.array(0, dtype=np.uint32)
 
         self.explore_data_handler = explore_data_handler
         if self.explore_data_handler.is_connected:
@@ -419,25 +504,30 @@ class SwipePlotExploreCanvas(app.Canvas):
     def setup_programs_and_plots(self):
         self.num_plots = self.explore_data_handler.get_num_plots()
 
-        for i in range(self.num_plots):
-            self.programs.append(gloo.Program(vertex_explore_swipe, fragment_explore_swipe))
-
+        # ***** PROGRAM FOR CURRENT POSITION LINE (LATEST VALUE) *****
         self.swipe_line_program['x_range'] = self.duration * self.explore_data_handler.get_current_sr()
+        self.swipe_line_program['x_length'] = self.duration
 
-        self.x_coords = np.arange(self.duration * self.explore_data_handler.get_current_sr()).astype(np.float32)
+        self.x_coords = np.arange(self.duration * self.explore_data_handler.current_sr).astype(np.uint32)
 
+        # ***** PROGRAMS FOR EXG PLOTTING *****
         for i in range(self.num_plots):
+            self.programs.append(gloo.Program(vertex_explore_swipe_new, fragment_explore_swipe))
+
             self.programs[i]['line_colour'] = self.line_colour
             self.programs[i]['line_colour_highlighted'] = self.line_colour_highlighted
             self.programs[i]['y_range'] = self.y_range
-            self.programs[i]['x_length'] = self.duration * self.explore_data_handler.get_current_sr()
+            self.programs[i]['is_scrolling'] = False
+            self.programs[i]['x_length'] = self.duration
+            self.programs[i]['x_min'] = 0
             self.programs[i]['vertical_padding'] = 0.05
             self.programs[i]['plot_index'] = i
+            self.programs[i]['baseline'] = 0
             self.programs[i]['num_plots'] = self.num_plots
 
     def clear_programs_and_plots(self):
         self.num_plots = 0
-        self.x_coords = np.array(0, dtype=np.float32)
+        self.x_coords = np.array(0, dtype=np.uint32)
         self.programs = []
 
     def set_y_scale(self, y_scale):
@@ -461,11 +551,12 @@ class SwipePlotExploreCanvas(app.Canvas):
             return
         self.duration = x_scale
         print(f"New x scale is {self.duration}")
-        self.x_coords = np.arange(self.duration * self.explore_data_handler.current_sr).astype(np.float32)
+        self.x_coords = np.arange(self.duration * self.explore_data_handler.current_sr).astype(np.uint32)
         for i in range(self.num_plots):
-            self.programs[i]['x_length'] = self.duration * self.explore_data_handler.current_sr
+            self.programs[i]['x_length'] = self.duration
         self.marker_program['x_range'] = self.duration
         self.swipe_line_program['x_range'] = self.duration * self.explore_data_handler.current_sr
+        self.swipe_line_program['x_length'] = self.duration
 
     def on_resize(self, event):
         gloo.set_viewport(0, 0, *event.size)
@@ -476,11 +567,25 @@ class SwipePlotExploreCanvas(app.Canvas):
         if not self.is_visible:
             return
         for i in range(self.num_plots):
-            self.programs[i].draw('line_strip')
-        self.marker_program.draw('points')  # Note: the marker positions in the plot are currently incorrect
-        self.swipe_line_program.draw('points')
+            if self.is_scrolling:
+                self.programs[i].draw('line_strip')
+            else:
+                # TODO: figure out an *easy* way to cut the lines in two if there is a gap in the middle of the graph
+                # Ideas:
+                # * primitive restart (not sure how to enable this)
+                # * two programs per line?! (one program per line is already unnecessary)
+                # * use "lines" not "line_strip" (needs an index buffer of twice the current size
+                # * use gl.drawArrays twice and specify offset (need to rewrite some stuff for this)
+                # most efficient (probably):
+                #  - use one buffer for all lines
+                #  - then draw using an index buffer that reflects this or multiple draw calls with offsets
+                self.programs[i].draw('line_strip', self.indices)
+        self.marker_program.draw('points')
+        if not self.is_scrolling:
+            self.swipe_line_program.draw('points')
 
     def on_key_press(self, event):
+        # TODO: decide what to do with this
         return  # switched off for now
         if event.key == keys.LEFT:
             self.set_x_scale(x_scale=(self.duration + 5))
@@ -507,35 +612,49 @@ class SwipePlotExploreCanvas(app.Canvas):
             self.scroll_activated_at = self.explore_data_handler.get_last_index(channel)
 
     def on_timer(self, event):
-        for i in range(self.num_plots):
-            additional_offset = 0
-            if self.scroll_activated_at >= 0:
-                additional_offset = self.explore_data_handler.get_distance(0, self.scroll_activated_at)
-            y, x, baseline, current_index = \
-                self.explore_data_handler.get_channel_and_time(i, self.duration,
-                                                               offset=self.translate_back + additional_offset)
-            if len(x) < 2:
-                return
+        additional_offset = 0
+        if self.scroll_activated_at >= 0:
+            additional_offset = self.explore_data_handler.get_distance(0, self.scroll_activated_at)
 
-            new_y = np.roll(y, current_index)
-            if len(x) < self.duration * self.explore_data_handler.current_sr:
-                self.programs[i]['pos_x'] = np.arange(len(x)).astype(np.float32)
-            else:
-                self.programs[i]['pos_x'] = self.x_coords
-            self.programs[i]['pos_y'] = new_y
-            #self.programs[i]['baseline'] = baseline
-            self.programs[i]['baseline'] = 0
-        _, timestamps_markers = self.explore_data_handler.get_markers()
-        start_index = np.searchsorted(timestamps_markers, x[0])
-        found_timestamps = timestamps_markers[start_index:]
+        if (additional_offset + self.translate_back) > 0:
+            self.is_scrolling = True
+        else:
+            self.is_scrolling = False
+
+        y, x, baseline, current_index = \
+            self.explore_data_handler.get_all_channels_and_time(self.duration,
+                                                                offset=self.translate_back + additional_offset)
+        start_ts = x[-1] - self.duration
+        first_ts = np.searchsorted(x, start_ts)  # assume the same ts index for all channels
+        x = x[first_ts:]
+
+        midpoint_ts = (x[-1] // self.duration) * self.duration
+        midpoint_index = np.searchsorted(x, midpoint_ts)
+        self.indices = gloo.IndexBuffer(np.roll(self.x_coords[:len(x)], len(x) - midpoint_index))
+
+        vbo = gloo.VertexBuffer(x)
+        for i in range(len(y)):
+            self.programs[i]['is_scrolling'] = self.is_scrolling
+            self.programs[i]['pos_x'] = vbo
+            self.programs[i]['x_min'] = x[0]
+            self.programs[i]['pos_y'] = gloo.VertexBuffer(y[i][first_ts:])
+
+        _, timestamps_markers = self.explore_data_handler.get_markers()  # TODO: use the strings (placeholder _ currently)
+        start_index, stop_index = np.searchsorted(timestamps_markers, [x[0], x[-1]])
+        found_timestamps = timestamps_markers[start_index:stop_index]
         self.marker_program['pos_x'] = found_timestamps
-        self.swipe_line_program['pos_x'] = np.array([current_index]).astype(np.float32)
+        self.marker_program['is_scrolling'] = self.is_scrolling
+        self.marker_program['x_min'] = x[0]
+        self.swipe_line_program['pos_x'] = np.array([x[-1]]).astype(np.float32)
+
         if not self.is_visible:
             self.is_visible = True
             self.show()
         self.update()
 
     def on_timer_measure_time(self, event):
+        """Measures time used for the on_timer method, however Canvas.measure_fps() is more precise for measuring
+        drawing performance/efficiency"""
         before = time.time()
         self.on_timer(event)
         after = time.time() - before
@@ -550,7 +669,8 @@ class EXGPlotVispy:
     def __init__(self, ui, explore_interface) -> None:
         self.ui = ui
         self.explore_handler = ExploreDataHandlerCircularBuffer(dev_name=None, interface=explore_interface)
-        self.c = SwipePlotExploreCanvas(self.explore_handler, y_scale=Settings.DEFAULT_SCALE, x_scale=Settings.WIN_LENGTH)
+        self.c = SwipePlotExploreCanvas(self.explore_handler, y_scale=Settings.DEFAULT_SCALE,
+                                        x_scale=Settings.WIN_LENGTH)
         self.ui.horizontalLayout_21.addWidget(self.c.native)
 
     def on_connected(self):
