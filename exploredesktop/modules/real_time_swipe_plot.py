@@ -8,6 +8,7 @@ from explorepy.stream_processor import TOPICS
 from explorepy.settings_manager import SettingsManager
 from vispy import app
 from vispy import gloo
+from vispy.geometry import create_cube
 from vispy.util import keys
 
 from exploredesktop.modules import Settings
@@ -99,16 +100,18 @@ class ExploreDataHandlerCircularBuffer:
         self.markers = None
         self.timestamps_markers = None
 
-        if self.explore_device.is_connected:
-            self.is_connected = True
-            self.setup_buffers()
-
         self.callbacks = {
             # TOPICS.raw_ExG: [self.handle_exg],
             TOPICS.filtered_ExG: [self.handle_exg],
             TOPICS.raw_orn: [],
             TOPICS.marker: [self.handle_marker]
         }
+
+        if self.explore_device.is_connected:
+            self.is_connected = True
+            self.dev_name = self.explore_device.device_name
+            self.setup_buffers()
+            self.subscribe_packet_callbacks()
 
     def on_connected(self):
         self.is_connected = True
@@ -243,18 +246,22 @@ class ExploreDataHandlerCircularBuffer:
         return self.max_channels
 
 
-vertex_explore_swipe_new = """
-    // Remember: positions (x and y) have to be in [-1;1]
-
+vertex_channel = """
     uniform float vertical_padding;
+    uniform float left_padding;
+    uniform float right_padding;
+    uniform float horizontal_padding;
+    uniform float top_padding;
+    uniform float bottom_padding;
 
     uniform vec4 line_colour;
     uniform vec4 line_colour_highlighted;
 
     uniform float plot_index;
     uniform float num_plots;
-    
+
     uniform bool is_scrolling;
+    uniform bool is_swipe_plot;
 
     uniform float x_length;
     uniform float y_range;
@@ -268,70 +275,30 @@ vertex_explore_swipe_new = """
     varying vec4 v_col;
 
     void main() {
-        float new_x;
-        if(!is_scrolling) {
-            new_x = (mod(pos_x, x_length) / x_length) * 2.0f - 1.0;
+        float available_y_range = (2.0 - 2.0*vertical_padding - top_padding - bottom_padding);
+        float available_plot_range = available_y_range / num_plots;
+        float offset = ((num_plots-plot_index)-0.5)*(1.0 / num_plots) * available_y_range;
+        
+        float y = pos_y - baseline;
+        y = y / (y_range / 2.0f); // all values in [-1;1], max_y = 1.0, min_y = -1.0
+        y = y * available_plot_range * 0.5;
+        y = y + offset - 1 + bottom_padding + vertical_padding;
+        
+        
+        // calculate new x
+        float x;
+        if(!is_scrolling && is_swipe_plot) {
+            x = mod(pos_x, x_length);
         } else {
-            new_x = ((pos_x - x_min) / x_length) * 2.0 - 1.0;
+            x = (pos_x - x_min);
         }
-
-        float plot_range = (2.0f - 2.0f * vertical_padding) / num_plots;  // height available per plot
-
-        float new_y = pos_y - baseline;
-        new_y = new_y / y_range / 2.0f;  // all values in [-1;1], max_y = 1.0, min_y = -1.0
-
-        // Move y coordinate to the correct location according to plot index, amount of plots and vertical padding
-        new_y = new_y * plot_range * 0.5f;
-        new_y = new_y + 1.0f;
-        new_y = new_y - 0.5f * plot_range;
-        new_y = new_y - vertical_padding;
-        new_y = new_y - plot_index * plot_range;
-
+        float available_x_range = 2.0 - 2.0*horizontal_padding - left_padding - right_padding;
+        x = (x / x_length) * available_x_range - 1.0 + left_padding + horizontal_padding;
+        
         v_col = line_colour;
-        gl_Position = vec4(new_x, new_y, 0.0, 1.0);
+        gl_Position = vec4(x, y, 0.0, 1.0);
     }
-    """
-
-vertex_explore_swipe = """
-    // Remember: positions (x and y) have to be in [-1;1]
-
-    uniform float vertical_padding;
-    
-    uniform vec4 line_colour;
-    uniform vec4 line_colour_highlighted;
-
-    uniform float plot_index;
-    uniform float num_plots;
-
-    uniform float x_length;
-    uniform float y_range;
-
-    uniform float baseline;
-
-    attribute float pos_x;
-    attribute float pos_y;
-
-    varying vec4 v_col;
-
-    void main() {
-        float new_x = (pos_x / x_length) * 2.0 - 1.0;
-
-        float plot_range = (2.0f - 2.0f * vertical_padding) / num_plots;  // height available per plot
-
-        float new_y = pos_y - baseline;
-        new_y = new_y / y_range / 2.0f;  // all values in [-1;1], max_y = 1.0, min_y = -1.0
-
-        // Move y coordinate to the correct location according to plot index, amount of plots and vertical padding
-        new_y = new_y * plot_range * 0.5f;
-        new_y = new_y + 1.0f;
-        new_y = new_y - 0.5f * plot_range;
-        new_y = new_y - vertical_padding;
-        new_y = new_y - plot_index * plot_range;
-
-        v_col = line_colour;
-        gl_Position = vec4(new_x, new_y, 0.0, 1.0);
-    }
-    """
+"""
 
 fragment_explore_swipe = """
     varying vec4 v_col;
@@ -393,16 +360,19 @@ void main(void) {
 vertex_explore_swipe_line = """
     #version 330
 
-    in float x_range;
     in float x_length;
+    in float horizontal_padding;
+    in float left_padding;
+    in float right_padding;
 
     in float pos_x;
 
     void main(void) {
-        //float new_x = ((pos_x - (int(pos_x / x_range) * x_range)) / x_range - 0.5f) * 2.0f;
-        float new_x = (mod(pos_x, x_length) / x_length) * 2.0f - 1.0;
-        //float new_x = (pos_x / x_range - 0.5f) * 2.0f;
-        gl_Position = vec4(new_x, 0.0, 0.0, 1.0);
+        float x = mod(pos_x, x_length);
+        float available_x_range = 2.0 - 2.0*horizontal_padding - left_padding - right_padding;
+        x = (x / x_length) * available_x_range - 1.0 + left_padding + horizontal_padding;
+
+        gl_Position = vec4(x, 0.0, 0.0, 1.0);
     }
     """
 
@@ -434,6 +404,73 @@ void main(void) {
 }
 """
 
+vertex_axes = """
+#version 330
+in vec2 pos;
+
+void main(void) {
+    gl_Position = vec4(pos.x, pos.y, 0.0, 1.0);
+    }
+"""
+
+fragment_axes = """
+#version 330
+
+out vec4 frag_color;
+
+void main()
+{
+    gl_FragColor = vec4(0.4, 0.4, 0.5, 1.0);
+}
+"""
+
+geometry_axes = """
+#version 330
+
+layout (points) in;
+layout (line_strip, max_vertices=3) out;
+
+void main(void) {
+    vec4 p = gl_in[0].gl_Position;
+
+    gl_Position = vec4(p.x, 1.0, 0, 1);
+    EmitVertex();
+    gl_Position = vec4(p.x, p.y, 0, 1);
+    EmitVertex();
+    gl_Position = vec4(1.0, p.y, 0, 1);
+    EmitVertex();
+    EndPrimitive();
+}
+"""
+
+vertex_axes_new = """
+#version 330
+in vec2 pos;
+
+void main(void) {
+    gl_Position = vec4(pos.x, pos.y, 0.0, 1.0);
+    }
+"""
+
+vertex_padding = """
+#version 330
+in vec2 pos;
+in float vertical_padding;
+in float horizontal_padding;
+in float top_padding;
+in float bottom_padding;
+in float left_padding;
+in float right_padding;
+
+void main(void) {
+    float available_y_range = 2.0 - 2.0*vertical_padding - top_padding - bottom_padding;
+    float available_x_range = 2.0 - 2.0*horizontal_padding - left_padding - right_padding;
+    float y = pos.y * available_y_range - 1.0 + bottom_padding + vertical_padding;
+    float x = pos.x * available_x_range - 1.0 + left_padding + horizontal_padding;
+    gl_Position = vec4(x, y, 0.0, 1.0);
+}
+"""
+
 
 class SwipePlotExploreCanvas(app.Canvas):
     def __init__(self, explore_data_handler, y_scale=100, x_scale=10):
@@ -441,9 +478,11 @@ class SwipePlotExploreCanvas(app.Canvas):
         # TODO: Make sure datahandler returns...
         #  * potentially the index buffer
         # TODO: Make code more efficient and readable (i.e. reuse shader if possible)
-        super(SwipePlotExploreCanvas, self).__init__()
-        print("Called init on canvas")
-        #self.measure_fps()
+        super(SwipePlotExploreCanvas, self).__init__(autoswap=False)
+        self.measure_fps()
+
+        self.is_swipe_plot = True
+        self.is_active = False
 
         self.ts_last_print = 0
 
@@ -460,6 +499,7 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         self.duration = x_scale  # in s
         self.y_range = y_scale * 2  # range for y in uV
+        self.x_resolution = 1
 
         self.scroll_activated_at = -1
 
@@ -469,16 +509,42 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.translate_back = 0
         self.is_scrolling = False
 
+        self.vertical_padding = 0.0
+        self.top_padding = 0.0
+        self.bottom_padding = 0.1
+
+        self.horizontal_padding = 0.0
+        self.left_padding = 0.05
+        self.right_padding = 0.0
+
+        self.half_tick_length = 0.01
+
+        self.axis_program = gloo.Program()
+        self.axis_program.set_shaders(vert=vertex_padding, frag=fragment_axes)
+        self.axis_program.bind(gloo.VertexBuffer(self.create_axes()))
+
+        self.axis_program['vertical_padding'] = self.vertical_padding
+        self.axis_program['horizontal_padding'] = self.horizontal_padding
+        self.axis_program['top_padding'] = self.top_padding
+        self.axis_program['left_padding'] = self.left_padding
+        self.axis_program['right_padding'] = self.right_padding
+        self.axis_program['bottom_padding'] = self.bottom_padding
+
+        self.x_ticks_program = gloo.Program()
+        self.x_ticks_program.set_shaders(vert=vertex_padding, frag=fragment_axes)
+        self.x_ticks_program.bind(gloo.VertexBuffer(self.create_x_ticks()))
+        self.x_ticks_program['vertical_padding'] = self.vertical_padding
+        self.x_ticks_program['horizontal_padding'] = self.horizontal_padding
+        self.x_ticks_program['top_padding'] = self.top_padding
+        self.x_ticks_program['left_padding'] = self.left_padding
+        self.x_ticks_program['right_padding'] = self.right_padding
+        self.x_ticks_program['bottom_padding'] = self.bottom_padding
+
         self.programs = []
 
-        self.marker_program = gloo.Program()
-        self.marker_program.set_shaders(vert=vertex_explore_marker, frag=frag_explore_marker,
-                                        geom=geometry_explore_marker)
-        self.marker_program['x_range'] = self.duration
-
-        self.swipe_line_program = gloo.Program()
-        self.swipe_line_program.set_shaders(vert=vertex_explore_swipe_line, frag=fragment_explore_swipe_line,
-                                            geom=geometry_explore_swipe_line)
+        self.swipe_line_program = None
+        self.y_ticks_program = None
+        self.marker_program = None
 
         self.timer = app.Timer("auto", self.on_timer, start=False)
 
@@ -486,6 +552,7 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         self.num_plots = 0
         self.x_coords = np.array(0, dtype=np.uint32)
+        self.indices = self.x_coords
 
         self.explore_data_handler = explore_data_handler
         if self.explore_data_handler.is_connected:
@@ -504,23 +571,52 @@ class SwipePlotExploreCanvas(app.Canvas):
     def setup_programs_and_plots(self):
         self.num_plots = self.explore_data_handler.get_num_plots()
 
+        # ***** PROGRAM FOR MARKERS *****
+        self.marker_program = gloo.Program()
+        self.marker_program.set_shaders(vert=vertex_explore_marker, frag=frag_explore_marker,
+                                        geom=geometry_explore_marker)
+        self.marker_program['x_range'] = self.duration
+
         # ***** PROGRAM FOR CURRENT POSITION LINE (LATEST VALUE) *****
-        self.swipe_line_program['x_range'] = self.duration * self.explore_data_handler.get_current_sr()
+        self.swipe_line_program = gloo.Program()
+        self.swipe_line_program.set_shaders(vert=vertex_explore_swipe_line, frag=fragment_explore_swipe_line,
+                                            geom=geometry_explore_swipe_line)
         self.swipe_line_program['x_length'] = self.duration
+        self.swipe_line_program['horizontal_padding'] = self.horizontal_padding
+        self.swipe_line_program['left_padding'] = self.left_padding
+        self.swipe_line_program['right_padding'] = self.right_padding
+
+        # ***** PROGRAM FOR Y TICKS *****
+        self.y_ticks_program = gloo.Program()
+        self.y_ticks_program.set_shaders(vert=vertex_padding, frag=fragment_axes)
+        self.y_ticks_program.bind(gloo.VertexBuffer(self.create_y_ticks()))
+        self.y_ticks_program['vertical_padding'] = self.vertical_padding
+        self.y_ticks_program['horizontal_padding'] = self.horizontal_padding
+        self.y_ticks_program['left_padding'] = self.left_padding
+        self.y_ticks_program['right_padding'] = self.right_padding
+        self.y_ticks_program['top_padding'] = self.top_padding
+        self.y_ticks_program['bottom_padding'] = self.bottom_padding
 
         self.x_coords = np.arange(self.duration * self.explore_data_handler.current_sr).astype(np.uint32)
+        self.indices = self.x_coords
 
         # ***** PROGRAMS FOR EXG PLOTTING *****
         for i in range(self.num_plots):
-            self.programs.append(gloo.Program(vertex_explore_swipe_new, fragment_explore_swipe))
+            self.programs.append(gloo.Program(vert=vertex_channel, frag=fragment_explore_swipe))
 
             self.programs[i]['line_colour'] = self.line_colour
             self.programs[i]['line_colour_highlighted'] = self.line_colour_highlighted
             self.programs[i]['y_range'] = self.y_range
             self.programs[i]['is_scrolling'] = False
+            self.programs[i]['is_swipe_plot'] = self.is_swipe_plot
             self.programs[i]['x_length'] = self.duration
             self.programs[i]['x_min'] = 0
-            self.programs[i]['vertical_padding'] = 0.05
+            self.programs[i]['vertical_padding'] = self.vertical_padding
+            self.programs[i]['horizontal_padding'] = self.horizontal_padding
+            self.programs[i]['left_padding'] = self.left_padding
+            self.programs[i]['right_padding'] = self.right_padding
+            self.programs[i]['top_padding'] = self.top_padding
+            self.programs[i]['bottom_padding'] = self.bottom_padding
             self.programs[i]['plot_index'] = i
             self.programs[i]['baseline'] = 0
             self.programs[i]['num_plots'] = self.num_plots
@@ -528,6 +624,8 @@ class SwipePlotExploreCanvas(app.Canvas):
     def clear_programs_and_plots(self):
         self.num_plots = 0
         self.x_coords = np.array(0, dtype=np.uint32)
+        self.swipe_line_program = None
+        self.y_ticks_program = None
         self.programs = []
 
     def set_y_scale(self, y_scale):
@@ -555,19 +653,22 @@ class SwipePlotExploreCanvas(app.Canvas):
         for i in range(self.num_plots):
             self.programs[i]['x_length'] = self.duration
         self.marker_program['x_range'] = self.duration
-        self.swipe_line_program['x_range'] = self.duration * self.explore_data_handler.current_sr
         self.swipe_line_program['x_length'] = self.duration
+        self.x_ticks_program.bind(gloo.VertexBuffer(self.create_x_ticks()))
 
     def on_resize(self, event):
         gloo.set_viewport(0, 0, *event.size)
 
     def on_draw(self, event):
-        # TODO: fix marker plotting
         gloo.clear(self.background_colour)
         if not self.is_visible:
             return
+        self.axis_program.draw('lines')
+        if self.y_ticks_program is not None:
+            self.y_ticks_program.draw('lines')
+        self.x_ticks_program.draw('lines')
         for i in range(self.num_plots):
-            if self.is_scrolling:
+            if self.is_scrolling or not self.is_swipe_plot:
                 self.programs[i].draw('line_strip')
             else:
                 # TODO: figure out an *easy* way to cut the lines in two if there is a gap in the middle of the graph
@@ -581,12 +682,13 @@ class SwipePlotExploreCanvas(app.Canvas):
                 #  - then draw using an index buffer that reflects this or multiple draw calls with offsets
                 self.programs[i].draw('line_strip', self.indices)
         self.marker_program.draw('points')
-        if not self.is_scrolling:
+        if not self.is_scrolling and self.swipe_line_program is not None and self.is_swipe_plot:
             self.swipe_line_program.draw('points')
+        self.swap_buffers()
 
     def on_key_press(self, event):
         # TODO: decide what to do with this
-        return  # switched off for now
+        #return  # switched off for now
         if event.key == keys.LEFT:
             self.set_x_scale(x_scale=(self.duration + 5))
         elif event.key == keys.RIGHT:
@@ -612,14 +714,13 @@ class SwipePlotExploreCanvas(app.Canvas):
             self.scroll_activated_at = self.explore_data_handler.get_last_index(channel)
 
     def on_timer(self, event):
+        if not self.is_active:
+            return
         additional_offset = 0
         if self.scroll_activated_at >= 0:
             additional_offset = self.explore_data_handler.get_distance(0, self.scroll_activated_at)
 
-        if (additional_offset + self.translate_back) > 0:
-            self.is_scrolling = True
-        else:
-            self.is_scrolling = False
+        self.is_scrolling = (additional_offset + self.translate_back) > 0
 
         y, x, baseline, current_index = \
             self.explore_data_handler.get_all_channels_and_time(self.duration,
@@ -628,9 +729,10 @@ class SwipePlotExploreCanvas(app.Canvas):
         first_ts = np.searchsorted(x, start_ts)  # assume the same ts index for all channels
         x = x[first_ts:]
 
-        midpoint_ts = (x[-1] // self.duration) * self.duration
-        midpoint_index = np.searchsorted(x, midpoint_ts)
-        self.indices = gloo.IndexBuffer(np.roll(self.x_coords[:len(x)], len(x) - midpoint_index))
+        if self.is_swipe_plot:
+            midpoint_ts = (x[-1] // self.duration) * self.duration
+            midpoint_index = np.searchsorted(x, midpoint_ts)
+            self.indices = gloo.IndexBuffer(np.roll(self.x_coords[:len(x)], len(x) - midpoint_index))
 
         vbo = gloo.VertexBuffer(x)
         for i in range(len(y)):
@@ -650,19 +752,44 @@ class SwipePlotExploreCanvas(app.Canvas):
         if not self.is_visible:
             self.is_visible = True
             self.show()
-        self.update()
+        if self.is_active:
+            self.update()
 
-    def on_timer_measure_time(self, event):
-        """Measures time used for the on_timer method, however Canvas.measure_fps() is more precise for measuring
-        drawing performance/efficiency"""
-        before = time.time()
-        self.on_timer(event)
-        after = time.time() - before
-        self.avg_refresh_time = self.avg_refresh_time * self.avg_refresh_time_iterator + after
-        self.avg_refresh_time_iterator += 1
-        self.avg_refresh_time /= self.avg_refresh_time_iterator
-        if self.avg_refresh_time_iterator % 30 == 0:
-            print(f"Average elapsed time for on_timer: {self.avg_refresh_time * 1000}ms")
+    def create_axes(self):
+        axes_positions = np.array([
+            # Axes
+            [0.0, 1.0],  # y-axis (top)
+            [0.0, 0.0],  # y-axis (bottom)
+            [0.0, 0.0],  # x-axis (left)
+            [1.0, 0.0]  # x-axis (right)
+        ])
+        axes = np.zeros(4, [('pos', np.float32, 2)])
+        axes['pos'] = axes_positions
+        return axes
+
+    def create_y_ticks(self):
+        ticks_y_positions = []
+        offset = 1.0 / self.num_plots
+        for i in range(self.num_plots):
+            y = ((self.num_plots-i)-0.5)*offset
+            ticks_y_positions.append([-self.half_tick_length, y])
+            ticks_y_positions.append([self.half_tick_length, y])
+        ticks_y = np.zeros(self.num_plots*2, [('pos', np.float32, 2)])
+        ticks_y['pos'] = ticks_y_positions
+        return ticks_y
+
+    def create_x_ticks(self):
+        ticks_x_positions = []
+        for i in range(self.duration//self.x_resolution+1):
+            x = i * self.x_resolution / self.duration
+            ticks_x_positions.append([x, -self.half_tick_length])
+            ticks_x_positions.append([x, self.half_tick_length])
+        ticks_x = np.zeros((self.duration//self.x_resolution+1)*2, [('pos', np.float32, 2)])
+        ticks_x['pos'] = ticks_x_positions
+        return ticks_x
+
+    def set_active(self, is_active):
+        self.is_active = is_active
 
 
 class EXGPlotVispy:
@@ -672,6 +799,9 @@ class EXGPlotVispy:
         self.c = SwipePlotExploreCanvas(self.explore_handler, y_scale=Settings.DEFAULT_SCALE,
                                         x_scale=Settings.WIN_LENGTH)
         self.ui.horizontalLayout_21.addWidget(self.c.native)
+
+    def set_active(self, is_active):
+        self.c.set_active(is_active)
 
     def on_connected(self):
         self.explore_handler.on_connected()

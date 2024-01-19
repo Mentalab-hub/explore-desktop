@@ -512,6 +512,7 @@ class MainWindow(QMainWindow, BaseModel):
             bool: whether page has changed
         """
         # TODO: split this function
+        self.exg_plot_vispy.set_active(False)
         btn_page_map = {
             "btn_home": self.ui.page_home, "btn_bt": self.ui.page_bt,
             "btn_settings": self.ui.page_settings, "btn_plots": self.ui.page_plotsNoWidget,
@@ -546,6 +547,7 @@ class MainWindow(QMainWindow, BaseModel):
 
             filt = True
             self.ui.stackedWidget.setCurrentWidget(self.ui.page_plotsNoWidget)
+            self.exg_plot_vispy.set_active(True)
 
             if self.filters.current_filters is None:
                 filt = self.filters.popup_filters()
