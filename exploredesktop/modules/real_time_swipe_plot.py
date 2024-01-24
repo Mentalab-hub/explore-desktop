@@ -1,7 +1,4 @@
 import sys
-import time
-
-import OpenGL.GL
 import numpy as np
 
 import explorepy
@@ -10,7 +7,6 @@ from explorepy.settings_manager import SettingsManager
 from vispy import app
 from vispy import gloo
 from vispy import visuals
-from vispy.visuals.collections import collection
 from vispy.util import keys
 
 from exploredesktop.modules import Settings
@@ -820,7 +816,7 @@ class SwipePlotExploreCanvas(app.Canvas):
     def create_y_labels(self):
         channel_text = []
         channel_positions = []
-        tr_sys = self.tr_sys = visuals.transforms.TransformSystem(self)
+        tr_sys = visuals.transforms.TransformSystem()
         tr_sys.configure(canvas=self)
         # This uses the same y position calculation as the y ticks
         y_range = 2.0 - 2.0 * self.vertical_padding - self.top_padding - self.bottom_padding
