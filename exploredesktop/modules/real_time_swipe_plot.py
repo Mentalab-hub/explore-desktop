@@ -474,6 +474,11 @@ void main(void) {
 """
 
 
+def s_to_time_string(time_s):
+    time_string = f"{time_s}s"
+    return time_string
+
+
 class SwipePlotExploreCanvas(app.Canvas):
     def __init__(self, explore_data_handler, y_scale=100, x_scale=10):
         # TODO: Test circular buffer boundaries
@@ -488,13 +493,15 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         self.ts_last_print = 0
 
+        self.current_second = 0
+
         self.timestamp_scale = 10000
 
         self.background_colour = (0.2, 0.2, 0.3, 1.0)
         self.line_colour = (0.6, 0.6, 0.8, 1.0)
         self.line_colour_highlighted = (0.8, 0.2, 0.2, 1.0)
         self.text_color = self.line_colour
-        self.font_size = 0.015
+        self.font_size = 6
 
         self.avg_refresh_time = 0
         self.avg_refresh_time_iterator = 0
@@ -608,6 +615,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.indices = self.x_coords
 
         self.channel_labels = self.create_y_labels()
+        self.time_labels = self.create_x_labels()
 
         # ***** PROGRAMS FOR EXG PLOTTING *****
         for i in range(self.num_plots):
@@ -665,6 +673,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.marker_program['x_range'] = self.duration
         self.swipe_line_program['x_length'] = self.duration
         self.x_ticks_program.bind(gloo.VertexBuffer(self.create_x_ticks()))
+        self.update_x_positions()
 
     def on_resize(self, event):
         gloo.set_viewport(0, 0, *event.size)
@@ -702,7 +711,7 @@ class SwipePlotExploreCanvas(app.Canvas):
 
     def on_key_press(self, event):
         # TODO: decide what to do with this
-        #return  # switched off for now
+        # return  # switched off for now
         if event.key == keys.LEFT:
             self.set_x_scale(x_scale=(self.duration + 5))
         elif event.key == keys.RIGHT:
@@ -755,6 +764,12 @@ class SwipePlotExploreCanvas(app.Canvas):
             self.programs[i]['x_min'] = x[0]
             self.programs[i]['pos_y'] = gloo.VertexBuffer(y[i][first_ts:])
 
+        if int(x[-1]) > self.current_second:
+            self.current_second = int(x[-1])
+            self.update_x_labels()
+        elif self.is_scrolling:
+            self.update_x_labels(clear=True)
+
         _, timestamps_markers = self.explore_data_handler.get_markers()  # TODO: use the strings (placeholder _ currently)
         start_index, stop_index = np.searchsorted(timestamps_markers, [x[0], x[-1]])
         found_timestamps = timestamps_markers[start_index:stop_index]
@@ -785,44 +800,83 @@ class SwipePlotExploreCanvas(app.Canvas):
         ticks_y_positions = []
         offset = 1.0 / self.num_plots
         for i in range(self.num_plots):
-            y = ((self.num_plots-i)-0.5)*offset
+            y = ((self.num_plots - i) - 0.5) * offset
             ticks_y_positions.append([-self.half_tick_length, y])
             ticks_y_positions.append([self.half_tick_length, y])
-        ticks_y = np.zeros(self.num_plots*2, [('pos', np.float32, 2)])
+        ticks_y = np.zeros(self.num_plots * 2, [('pos', np.float32, 2)])
         ticks_y['pos'] = ticks_y_positions
         return ticks_y
 
     def create_x_ticks(self):
         ticks_x_positions = []
-        for i in range(self.duration//self.x_resolution+1):
+        for i in range(self.duration // self.x_resolution + 1):
             x = i * self.x_resolution / self.duration
             ticks_x_positions.append([x, -self.half_tick_length])
             ticks_x_positions.append([x, self.half_tick_length])
-        ticks_x = np.zeros((self.duration//self.x_resolution+1)*2, [('pos', np.float32, 2)])
+        ticks_x = np.zeros((self.duration // self.x_resolution + 1) * 2, [('pos', np.float32, 2)])
         ticks_x['pos'] = ticks_x_positions
         return ticks_x
 
     def create_y_labels(self):
         channel_text = []
         channel_positions = []
-        tr_sys = self.tr_sys = visuals.transforms.TransformSystem()
-        tr_sys.configure(viewport=(1, -1, 2, 2), canvas=self)
+        tr_sys = self.tr_sys = visuals.transforms.TransformSystem(self)
+        tr_sys.configure(canvas=self)
         # This uses the same y position calculation as the y ticks
-        y_range = 2.0 - 2.0*self.vertical_padding - self.top_padding - self.bottom_padding
+        y_range = 2.0 - 2.0 * self.vertical_padding - self.top_padding - self.bottom_padding
         offset = 1.0 / self.num_plots
-        x = self.left_padding+self.horizontal_padding-2*self.half_tick_length-1
+        x = self.left_padding + self.horizontal_padding - 2 * self.half_tick_length - 1
         for i in range(self.num_plots):
             y = ((self.num_plots - i) - 0.5) * offset
             y = y * y_range - 1.0 + self.bottom_padding + self.vertical_padding
-            channel_text.append(f"ch{i+1}")
+            channel_text.append(f"ch{i + 1}")
             channel_positions.append((x, y))
         channel_labels = visuals.TextVisual(channel_text, color=self.text_color, pos=channel_positions,
-                                                 font_size=self.font_size, anchor_y='center', anchor_x='right')
+                                            font_size=self.font_size, anchor_y='center', anchor_x='right')
         channel_labels.transforms = tr_sys
         return channel_labels
 
     def create_x_labels(self):
-        raise NotImplementedError
+        start = (self.current_second // self.duration) * self.duration
+        time_text = []
+        time_positions = []
+        tr_sys = visuals.transforms.TransformSystem()
+        tr_sys.configure(canvas=self)
+        y = self.bottom_padding + self.vertical_padding - 2 * self.half_tick_length - 1
+        x_range = 2 - 2 * self.horizontal_padding - self.left_padding - self.right_padding
+        for i in range(self.duration // self.x_resolution + 1):
+            x = (i * self.x_resolution / self.duration) * x_range - 1 + self.left_padding + self.horizontal_padding
+            t = start + i
+            if t > self.current_second > self.duration:
+                t -= self.duration
+            time_text.append(s_to_time_string(t))
+            time_positions.append((x, y))
+        time_labels = visuals.TextVisual(time_text, color=self.text_color, pos=time_positions,
+                                         font_size=self.font_size, anchor_y='bottom', anchor_x='right')
+        time_labels.transforms = tr_sys
+        return time_labels
+
+    def update_x_labels(self, clear=False):
+        if clear:
+            self.time_labels.text = []
+            return
+        time_text = []
+        start = (self.current_second // self.duration) * self.duration
+        for i in range(self.duration // self.x_resolution + 1):
+            t = start + i
+            if t > self.current_second > self.duration:
+                t -= self.duration
+            time_text.append(s_to_time_string(t))
+        self.time_labels.text = time_text
+
+    def update_x_positions(self):
+        time_positions = []
+        y = self.bottom_padding + self.vertical_padding - 2 * self.half_tick_length - 1
+        x_range = 2 - 2 * self.horizontal_padding - self.left_padding - self.right_padding
+        for i in range(self.duration // self.x_resolution + 1):
+            x = (i * self.x_resolution / self.duration) * x_range - 1 + self.left_padding + self.horizontal_padding
+            time_positions.append((x, y))
+        self.time_labels.pos = time_positions
 
     def set_active(self, is_active):
         self.is_active = is_active
