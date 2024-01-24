@@ -1,6 +1,7 @@
 import sys
 import time
 
+import OpenGL.GL
 import numpy as np
 
 import explorepy
@@ -8,7 +9,8 @@ from explorepy.stream_processor import TOPICS
 from explorepy.settings_manager import SettingsManager
 from vispy import app
 from vispy import gloo
-from vispy.geometry import create_cube
+from vispy import visuals
+from vispy.visuals.collections import collection
 from vispy.util import keys
 
 from exploredesktop.modules import Settings
@@ -491,6 +493,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.background_colour = (0.2, 0.2, 0.3, 1.0)
         self.line_colour = (0.6, 0.6, 0.8, 1.0)
         self.line_colour_highlighted = (0.8, 0.2, 0.2, 1.0)
+        self.text_color = self.line_colour
+        self.font_size = 0.015
 
         self.avg_refresh_time = 0
         self.avg_refresh_time_iterator = 0
@@ -514,7 +518,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.bottom_padding = 0.1
 
         self.horizontal_padding = 0.0
-        self.left_padding = 0.05
+        self.left_padding = 0.1
         self.right_padding = 0.0
 
         self.half_tick_length = 0.01
@@ -539,6 +543,9 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.x_ticks_program['left_padding'] = self.left_padding
         self.x_ticks_program['right_padding'] = self.right_padding
         self.x_ticks_program['bottom_padding'] = self.bottom_padding
+
+        self.channel_labels = None
+        self.time_labels = None
 
         self.programs = []
 
@@ -600,6 +607,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.x_coords = np.arange(self.duration * self.explore_data_handler.current_sr).astype(np.uint32)
         self.indices = self.x_coords
 
+        self.channel_labels = self.create_y_labels()
+
         # ***** PROGRAMS FOR EXG PLOTTING *****
         for i in range(self.num_plots):
             self.programs.append(gloo.Program(vert=vertex_channel, frag=fragment_explore_swipe))
@@ -624,6 +633,7 @@ class SwipePlotExploreCanvas(app.Canvas):
     def clear_programs_and_plots(self):
         self.num_plots = 0
         self.x_coords = np.array(0, dtype=np.uint32)
+        self.channel_labels = None
         self.swipe_line_program = None
         self.y_ticks_program = None
         self.programs = []
@@ -684,6 +694,10 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.marker_program.draw('points')
         if not self.is_scrolling and self.swipe_line_program is not None and self.is_swipe_plot:
             self.swipe_line_program.draw('points')
+        if self.channel_labels:
+            self.channel_labels.draw()
+        if self.time_labels:
+            self.time_labels.draw()
         self.swap_buffers()
 
     def on_key_press(self, event):
@@ -787,6 +801,28 @@ class SwipePlotExploreCanvas(app.Canvas):
         ticks_x = np.zeros((self.duration//self.x_resolution+1)*2, [('pos', np.float32, 2)])
         ticks_x['pos'] = ticks_x_positions
         return ticks_x
+
+    def create_y_labels(self):
+        channel_text = []
+        channel_positions = []
+        tr_sys = self.tr_sys = visuals.transforms.TransformSystem()
+        tr_sys.configure(viewport=(1, -1, 2, 2), canvas=self)
+        # This uses the same y position calculation as the y ticks
+        y_range = 2.0 - 2.0*self.vertical_padding - self.top_padding - self.bottom_padding
+        offset = 1.0 / self.num_plots
+        x = self.left_padding+self.horizontal_padding-2*self.half_tick_length-1
+        for i in range(self.num_plots):
+            y = ((self.num_plots - i) - 0.5) * offset
+            y = y * y_range - 1.0 + self.bottom_padding + self.vertical_padding
+            channel_text.append(f"ch{i+1}")
+            channel_positions.append((x, y))
+        channel_labels = visuals.TextVisual(channel_text, color=self.text_color, pos=channel_positions,
+                                                 font_size=self.font_size, anchor_y='center', anchor_x='right')
+        channel_labels.transforms = tr_sys
+        return channel_labels
+
+    def create_x_labels(self):
+        raise NotImplementedError
 
     def set_active(self, is_active):
         self.is_active = is_active
