@@ -681,7 +681,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.axis_program.draw('lines')
         if self.y_ticks_program is not None:
             self.y_ticks_program.draw('lines')
-        self.x_ticks_program.draw('lines')
+        if not self.is_scrolling:
+            self.x_ticks_program.draw('lines')
         for i in range(self.num_plots):
             if self.is_scrolling or not self.is_swipe_plot:
                 self.programs[i].draw('line_strip')
@@ -701,7 +702,7 @@ class SwipePlotExploreCanvas(app.Canvas):
             self.swipe_line_program.draw('points')
         if self.channel_labels:
             self.channel_labels.draw()
-        if self.time_labels:
+        if self.time_labels and not self.is_scrolling:
             self.time_labels.draw()
         self.swap_buffers()
 
@@ -763,8 +764,6 @@ class SwipePlotExploreCanvas(app.Canvas):
         if int(x[-1]) > self.current_second:
             self.current_second = int(x[-1])
             self.update_x_labels()
-        elif self.is_scrolling:
-            self.update_x_labels(clear=True)
 
         _, timestamps_markers = self.explore_data_handler.get_markers()  # TODO: use the strings (placeholder _ currently)
         start_index, stop_index = np.searchsorted(timestamps_markers, [x[0], x[-1]])
