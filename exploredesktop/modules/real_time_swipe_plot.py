@@ -293,7 +293,11 @@ vertex_channel = """
         float available_x_range = 2.0 - 2.0*horizontal_padding - left_padding - right_padding;
         x = (x / x_length) * available_x_range - 1.0 + left_padding + horizontal_padding;
         
-        v_col = line_colour;
+        //v_col = line_colour;
+        float r = 1.0f-(x/2.0f+0.5f);
+        float g = x/2.0f + 0.5f;
+        float b = x/2.0f + 0.5f;
+        v_col = vec4(r, g, b, 1.0);
         gl_Position = vec4(x, y, 0.0, 1.0);
     }
 """
@@ -355,50 +359,30 @@ void main(void) {
 }
 """
 
-vertex_explore_swipe_line = """
-    #version 330
+vertex_vertical_line = """
+    #version 120
 
-    in float x_length;
-    in float horizontal_padding;
-    in float left_padding;
-    in float right_padding;
+    uniform float x_length;
+    uniform float horizontal_padding;
+    uniform float left_padding;
+    uniform float right_padding;
 
-    in float pos_x;
-
+    attribute vec2 pos;
     void main(void) {
-        float x = mod(pos_x, x_length);
+        float x = mod(pos.x, x_length);
         float available_x_range = 2.0 - 2.0*horizontal_padding - left_padding - right_padding;
         x = (x / x_length) * available_x_range - 1.0 + left_padding + horizontal_padding;
 
-        gl_Position = vec4(x, 0.0, 0.0, 1.0);
+        gl_Position = vec4(x, pos.y, 0.0, 1.0);
     }
-    """
+"""
 
 fragment_explore_swipe_line = """
-#version 330
-
-out vec4 frag_color;
+#version 120
 
 void main()
 {
     gl_FragColor = vec4(0.3, 0.3, 0.4, 1.0);
-}
-"""
-
-geometry_explore_swipe_line = """
-#version 330
-
-layout (points) in;
-layout (line_strip, max_vertices=2) out;
-
-void main(void) {
-    vec4 p = gl_in[0].gl_Position;
-
-    gl_Position = vec4(p.x, 1.0, 0, 1);
-    EmitVertex();
-    gl_Position = vec4(p.x, -1.0, 0, 1);
-    EmitVertex();
-    EndPrimitive();
 }
 """
 
@@ -583,14 +567,14 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         # ***** PROGRAM FOR MARKERS *****
         self.marker_program = gloo.Program()
-        self.marker_program.set_shaders(vert=vertex_explore_marker, frag=frag_explore_marker,
-                                        geom=geometry_explore_marker)
-        self.marker_program['x_range'] = self.duration
+        self.marker_program.set_shaders(vert=vertex_vertical_line, frag=frag_explore_marker)
+        self.marker_program['x_length'] = self.duration
+        self.marker_program['horizontal_padding'] = self.horizontal_padding
+        self.marker_program['left_padding'] = self.left_padding
+        self.marker_program['right_padding'] = self.right_padding
 
         # ***** PROGRAM FOR CURRENT POSITION LINE (LATEST VALUE) *****
-        self.swipe_line_program = gloo.Program()
-        self.swipe_line_program.set_shaders(vert=vertex_explore_swipe_line, frag=fragment_explore_swipe_line,
-                                            geom=geometry_explore_swipe_line)
+        self.swipe_line_program = gloo.Program(vert=vertex_vertical_line, frag=fragment_explore_swipe_line)
         self.swipe_line_program['x_length'] = self.duration
         self.swipe_line_program['horizontal_padding'] = self.horizontal_padding
         self.swipe_line_program['left_padding'] = self.left_padding
@@ -697,9 +681,9 @@ class SwipePlotExploreCanvas(app.Canvas):
                 #  - use one buffer for all lines
                 #  - then draw using an index buffer that reflects this or multiple draw calls with offsets
                 self.programs[i].draw('line_strip', self.indices)
-        self.marker_program.draw('points')
+        self.marker_program.draw('lines')
         if not self.is_scrolling and self.swipe_line_program is not None and self.is_swipe_plot:
-            self.swipe_line_program.draw('points')
+            self.swipe_line_program.draw('lines')
         if self.channel_labels:
             self.channel_labels.draw()
         if self.time_labels and not self.is_scrolling:
@@ -768,10 +752,20 @@ class SwipePlotExploreCanvas(app.Canvas):
         _, timestamps_markers = self.explore_data_handler.get_markers()  # TODO: use the strings (placeholder _ currently)
         start_index, stop_index = np.searchsorted(timestamps_markers, [x[0], x[-1]])
         found_timestamps = timestamps_markers[start_index:stop_index]
-        self.marker_program['pos_x'] = found_timestamps
-        self.marker_program['is_scrolling'] = self.is_scrolling
-        self.marker_program['x_min'] = x[0]
-        self.swipe_line_program['pos_x'] = np.array([x[-1]]).astype(np.float32)
+        timestamp_coordinates = []
+        for t in found_timestamps:
+            timestamp_coordinates.append([t, 1.0])
+            timestamp_coordinates.append([t, -1.0])
+        timestamp_buffer = np.zeros(len(timestamp_coordinates), [('pos', np.float32, 2)])
+        if len(timestamp_coordinates) > 0:
+            timestamp_buffer['pos'] = timestamp_coordinates
+        self.marker_program.bind(gloo.VertexBuffer(timestamp_buffer))
+        #self.marker_program['is_scrolling'] = self.is_scrolling
+        #self.marker_program['x_min'] = x[0]
+        #self.swipe_line_program['pos_x'] = np.array([x[-1]]).astype(np.float32)
+        swipe_line_buffer = np.zeros(2, [('pos', np.float32, 2)])
+        swipe_line_buffer['pos'] = [[x[-1], 1.0], [x[-1], -1.0]]
+        self.swipe_line_program.bind(gloo.VertexBuffer(swipe_line_buffer))
 
         if not self.is_visible:
             self.is_visible = True
