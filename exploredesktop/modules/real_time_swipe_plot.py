@@ -303,31 +303,8 @@ fragment_explore_swipe = """
     }
     """
 
-vertex_explore_marker = """
-    #version 330
-
-    in float x_range;
-    uniform float x_min;
-    uniform bool is_scrolling;
-
-    in float pos_x;
-
-    void main(void) {
-        //float new_x = ((pos_x - (int(pos_x / x_range) * x_range)) / x_range - 0.5f) * 2.0f;
-        float new_x;
-        if(!is_scrolling) {
-            new_x = (mod(pos_x, x_range) / x_range) * 2.0f - 1.0;
-        } else {
-            new_x = ((pos_x - x_min) / x_range) * 2.0 - 1.0;
-        }
-        gl_Position = vec4(new_x, 0.0, 0.0, 1.0);
-    }
-    """
-
 frag_explore_marker = """
-#version 330
-
-out vec4 frag_color;
+#version 120
 
 void main()
 {
@@ -335,22 +312,6 @@ void main()
 }
 """
 
-geometry_explore_marker = """
-#version 330
-
-layout (points) in;
-layout (line_strip, max_vertices=2) out;
-
-void main(void) {
-    vec4 p = gl_in[0].gl_Position;
-
-    gl_Position = vec4(p.x, 1.0, 0, 1);
-    EmitVertex();
-    gl_Position = vec4(p.x, -1.0, 0, 1);
-    EmitVertex();
-    EndPrimitive();
-}
-"""
 
 vertex_vertical_line = """
     #version 120
@@ -379,19 +340,8 @@ void main()
 }
 """
 
-vertex_axes = """
-#version 330
-in vec2 pos;
-
-void main(void) {
-    gl_Position = vec4(pos.x, pos.y, 0.0, 1.0);
-    }
-"""
-
 fragment_axes = """
-#version 330
-
-out vec4 frag_color;
+#version 120
 
 void main()
 {
@@ -399,36 +349,8 @@ void main()
 }
 """
 
-geometry_axes = """
-#version 330
-
-layout (points) in;
-layout (line_strip, max_vertices=3) out;
-
-void main(void) {
-    vec4 p = gl_in[0].gl_Position;
-
-    gl_Position = vec4(p.x, 1.0, 0, 1);
-    EmitVertex();
-    gl_Position = vec4(p.x, p.y, 0, 1);
-    EmitVertex();
-    gl_Position = vec4(1.0, p.y, 0, 1);
-    EmitVertex();
-    EndPrimitive();
-}
-"""
-
-vertex_axes_new = """
-#version 330
-in vec2 pos;
-
-void main(void) {
-    gl_Position = vec4(pos.x, pos.y, 0.0, 1.0);
-    }
-"""
-
 vertex_padding = """
-#version 330
+#version 120
 in vec2 pos;
 in float vertical_padding;
 in float horizontal_padding;
