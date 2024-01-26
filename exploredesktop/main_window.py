@@ -573,6 +573,9 @@ class MainWindow(QMainWindow, BaseModel):
         Args:
             idx (int): index of the active tab
         """
+        self.exg_plot_vispy.set_active(False)
+        if idx == 0:
+            self.exg_plot_vispy.set_active(True)
         if idx == 2:  # FFT tab active
             self.fft_plot.start_timer()
         else:

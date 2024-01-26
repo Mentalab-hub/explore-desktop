@@ -11,9 +11,6 @@ from vispy.util import keys
 
 from exploredesktop.modules import Settings
 
-gloo.gl.use_gl('gl+')
-
-
 class CircularBufferPadded:
     def __init__(self, max_length, dtype=np.float32):
         self.max_length = max_length
@@ -293,11 +290,7 @@ vertex_channel = """
         float available_x_range = 2.0 - 2.0*horizontal_padding - left_padding - right_padding;
         x = (x / x_length) * available_x_range - 1.0 + left_padding + horizontal_padding;
         
-        //v_col = line_colour;
-        float r = 1.0f-(x/2.0f+0.5f);
-        float g = x/2.0f + 0.5f;
-        float b = x/2.0f + 0.5f;
-        v_col = vec4(r, g, b, 1.0);
+        v_col = line_colour;
         gl_Position = vec4(x, y, 0.0, 1.0);
     }
 """
@@ -660,7 +653,7 @@ class SwipePlotExploreCanvas(app.Canvas):
 
     def on_draw(self, event):
         gloo.clear(self.background_colour)
-        if not self.is_visible:
+        if not self.is_visible or not self.is_active:
             return
         self.axis_program.draw('lines')
         if self.y_ticks_program is not None:
