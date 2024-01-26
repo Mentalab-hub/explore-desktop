@@ -344,10 +344,19 @@ vertex_vertical_line = """
     uniform float horizontal_padding;
     uniform float left_padding;
     uniform float right_padding;
+    
+    uniform float x_min;
+    
+    uniform bool is_scrolling;
 
     attribute vec2 pos;
     void main(void) {
-        float x = mod(pos.x, x_length);
+        float x;
+        if (!is_scrolling){
+            x = mod(pos.x, x_length);
+        } else {
+            x = pos.x - x_min;
+        }
         float available_x_range = 2.0 - 2.0*horizontal_padding - left_padding - right_padding;
         x = (x / x_length) * available_x_range - 1.0 + left_padding + horizontal_padding;
 
@@ -523,6 +532,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.swipe_line_program['horizontal_padding'] = self.horizontal_padding
         self.swipe_line_program['left_padding'] = self.left_padding
         self.swipe_line_program['right_padding'] = self.right_padding
+        self.swipe_line_program['is_scrolling'] = False
+        self.swipe_line_program['x_min'] = 0.0
 
         # ***** PROGRAM FOR Y TICKS *****
         self.y_ticks_program = gloo.Program()
@@ -702,8 +713,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         if len(timestamp_coordinates) > 0:
             timestamp_buffer['pos'] = timestamp_coordinates
         self.marker_program.bind(gloo.VertexBuffer(timestamp_buffer))
-        #self.marker_program['is_scrolling'] = self.is_scrolling
-        #self.marker_program['x_min'] = x[0]
+        self.marker_program['is_scrolling'] = self.is_scrolling
+        self.marker_program['x_min'] = x[0]
         #self.swipe_line_program['pos_x'] = np.array([x[-1]]).astype(np.float32)
         swipe_line_buffer = np.zeros(2, [('pos', np.float32, 2)])
         swipe_line_buffer['pos'] = [[x[-1], 1.0], [x[-1], -1.0]]
