@@ -242,6 +242,7 @@ class ExploreDataHandlerCircularBuffer:
 
 
 vertex_channel = """
+    #version 120
     uniform float vertical_padding;
     uniform float left_padding;
     uniform float right_padding;
@@ -296,6 +297,7 @@ vertex_channel = """
 """
 
 fragment_explore_swipe = """
+    #version 120
     varying vec4 v_col;
 
     void main() {
@@ -311,7 +313,6 @@ void main()
     gl_FragColor = vec4(0.9, 0.0, 0.0, 1.0);
 }
 """
-
 
 vertex_vertical_line = """
     #version 120
@@ -351,13 +352,15 @@ void main()
 
 vertex_padding = """
 #version 120
-in vec2 pos;
-in float vertical_padding;
-in float horizontal_padding;
-in float top_padding;
-in float bottom_padding;
-in float left_padding;
-in float right_padding;
+
+attribute vec2 pos;
+
+uniform float vertical_padding;
+uniform float horizontal_padding;
+uniform float top_padding;
+uniform float bottom_padding;
+uniform float left_padding;
+uniform float right_padding;
 
 void main(void) {
     float available_y_range = 2.0 - 2.0*vertical_padding - top_padding - bottom_padding;
