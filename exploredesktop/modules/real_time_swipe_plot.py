@@ -189,11 +189,9 @@ class ExploreDataHandlerCircularBuffer:
 
     def handle_marker(self, packet):
         timestamp, marker_string = packet.get_data()
-        print(f"Got marker with ts: {timestamp}")
         if self.time_offset == 0:
             self.time_offset = timestamp
         timestamp = timestamp - self.time_offset
-        print(f"Timestamp with offset subtracted is: {timestamp}")
         if timestamp <= self.timestamps_markers.view_end(0):
             print(f"Marker timestamp in the past, last: {self.markers.view_end(0)}, new: {timestamp}")
         else:
@@ -934,8 +932,6 @@ class SwipePlotExploreCanvas(app.Canvas):
                     self.currently_visible_plots[i] = 1
                 iterator += 1
 
-        print(self.currently_visible_plots)
-
     def set_max_visible_plots(self, new_max):
         self.max_visible_plots = new_max
         self.update_visible_plots_in_timer = True
@@ -949,7 +945,6 @@ class SwipePlotExploreCanvas(app.Canvas):
 
     def set_plot_offset(self, new_offset):
         self.plot_offset = max(min(new_offset, sum(self.channel_mask)-self.max_visible_plots), 0)
-        print(f"New plot offset: {self.plot_offset}")
         self.update_visible_plots_in_timer = True
 
     def set_active(self, is_active):
