@@ -90,6 +90,8 @@ class ExploreDataHandlerCircularBuffer:
         self.moving_average_window = 200
         self.time_offset = 0
 
+        self.settings = None
+        self.channel_mask = []
         self.channels = {}
         self.baselines = {}
 
@@ -138,7 +140,11 @@ class ExploreDataHandlerCircularBuffer:
 
     def setup_buffers(self):
         self.current_sr = int(self.explore_device.stream_processor.device_info['sampling_rate'])
-        self.max_channels = SettingsManager(self.dev_name).get_channel_count()
+        self.settings = SettingsManager(self.dev_name)
+        self.max_channels = self.settings.get_channel_count()
+        self.channel_mask = self.settings.get_adc_mask()
+        self.channel_mask.reverse()
+
         self.packet_length = self.get_packet_length()  # requires max_channels to be set
 
         self.max_length = self.current_sr * self.max_duration
@@ -151,6 +157,10 @@ class ExploreDataHandlerCircularBuffer:
         self.timestamps = CircularBufferPadded(self.max_length, dtype=np.float32)
         self.markers = CircularBufferPadded(self.max_length_markers, dtype='<U10')
         self.timestamps_markers = CircularBufferPadded(self.max_length_markers, dtype=np.float32)
+
+    def change_settings(self):
+        self.channel_mask = self.settings.get_adc_mask()
+        self.channel_mask.reverse()
 
     def subscribe_packet_callbacks(self):
         self.sub_unsub_packet_callbacks(sp_callback=self.explore_device.stream_processor.subscribe)
@@ -211,10 +221,13 @@ class ExploreDataHandlerCircularBuffer:
             current_index = 0
 
         timestamps = self.timestamps.view_end(num_values, offset=offset)
-        for i in range(len(self.channels)):
-            all_channels[i] = self.channels[i].view_end(num_values, offset=offset)
+        #for i in range(len(self.channels)):
+        #    all_channels[i] = self.channels[i].view_end(num_values, offset=offset)
+        for i in range(len(self.channel_mask)):
+            if self.channel_mask[i] == 1:
+                all_channels[i] = self.channels[i].view_end(num_values, offset=offset)
 
-        return all_channels, timestamps, self.baselines, current_index
+        return all_channels, timestamps, current_index
 
     def get_packet_length(self):
         return 4 if (self.max_channels == 32 or self.max_channels == 16) \
@@ -241,6 +254,9 @@ class ExploreDataHandlerCircularBuffer:
 
     def get_num_plots(self):
         return self.max_channels
+
+    def get_channel_mask(self):
+        return self.channel_mask
 
 
 vertex_default = """
@@ -434,6 +450,14 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.text_color = self.line_colour
         self.font_size = 6
 
+        self.zoom_factor = 1
+        self.max_visible_plots = 8
+        self.channel_mask = []
+        self.currently_visible_plots = []
+        # If channels are en- or disabled, the setting has to be synced between on_timer and on_draw, hence the flag
+        self.update_visible_plots_in_timer = False
+        self.plot_offset = 0
+
         self.avg_refresh_time = 0
         self.avg_refresh_time_iterator = 0
 
@@ -474,15 +498,8 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         self.x_ticks_program = gloo.Program()
         self.x_ticks_program.set_shaders(vert=vertex_default, frag=fragment_axes)
-        #
 
         self.x_ticks_program.bind(gloo.VertexBuffer(self.create_x_ticks()))
-        #self.x_ticks_program['vertical_padding'] = self.vertical_padding
-        #self.x_ticks_program['horizontal_padding'] = self.horizontal_padding
-        #self.x_ticks_program['top_padding'] = self.top_padding
-        #self.x_ticks_program['left_padding'] = self.left_padding
-        #self.x_ticks_program['right_padding'] = self.right_padding
-        #self.x_ticks_program['bottom_padding'] = self.bottom_padding
 
         self.channel_labels = None
         self.time_labels = None
@@ -517,6 +534,9 @@ class SwipePlotExploreCanvas(app.Canvas):
 
     def setup_programs_and_plots(self):
         self.num_plots = self.explore_data_handler.get_num_plots()
+        self.channel_mask = self.explore_data_handler.get_channel_mask()
+        #self.zoom_factor = sum(self.channel_mask) / self.max_visible_plots
+        #self.set_currently_visible_plots()
 
         # ***** PROGRAM FOR MARKERS *****
         self.marker_program = gloo.Program()
@@ -573,6 +593,8 @@ class SwipePlotExploreCanvas(app.Canvas):
             self.programs[i]['baseline'] = 0
             self.programs[i]['num_plots'] = self.num_plots
 
+        self.update_visible_plots()
+
     def clear_programs_and_plots(self):
         self.num_plots = 0
         self.x_coords = np.array(0, dtype=np.uint32)
@@ -622,7 +644,10 @@ class SwipePlotExploreCanvas(app.Canvas):
         #if not self.is_scrolling:
         #    self.x_ticks_program.draw('lines')
         self.x_ticks_program.draw('lines')
-        for i in range(self.num_plots):
+        #for i in range(self.num_plots):
+        for i in range(len(self.currently_visible_plots)):
+            if self.currently_visible_plots[i] == 0:
+                continue
             if self.is_scrolling or not self.is_swipe_plot:
                 self.programs[i].draw('line_strip')
             else:
@@ -647,15 +672,17 @@ class SwipePlotExploreCanvas(app.Canvas):
 
     def on_key_press(self, event):
         # TODO: decide what to do with this
-        return  # switched off for now
-        if event.key == keys.LEFT:
-            self.set_x_scale(x_scale=(self.duration + 5))
-        elif event.key == keys.RIGHT:
-            self.set_x_scale(x_scale=(self.duration - 5))
-        elif event.key == keys.UP:
-            self.set_y_scale(y_scale=((self.y_range / 2) + 10))
+        # switched off for now
+        #if event.key == keys.LEFT:
+        #    self.set_x_scale(x_scale=(self.duration + 5))
+        #elif event.key == keys.RIGHT:
+        #    self.set_x_scale(x_scale=(self.duration - 5))
+        if event.key == keys.UP:
+            #self.set_y_scale(y_scale=((self.y_range / 2) + 10))
+            self.set_plot_offset(self.plot_offset-1)
         elif event.key == keys.DOWN:
-            self.set_y_scale(y_scale=((self.y_range / 2) - 10))
+            #self.set_y_scale(y_scale=((self.y_range / 2) - 10))
+            self.set_plot_offset(self.plot_offset+1)
         self.update()
 
     def on_mouse_wheel(self, event):
@@ -681,9 +708,10 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         self.is_scrolling = (additional_offset + self.translate_back) > 0
 
-        y, x, baseline, current_index = \
+        y, x, current_index = \
             self.explore_data_handler.get_all_channels_and_time(self.duration,
                                                                 offset=self.translate_back + additional_offset)
+
         start_ts = x[-1] - self.duration
         first_ts = np.searchsorted(x, start_ts)  # assume the same ts index for all channels
         x = x[first_ts:]
@@ -694,11 +722,18 @@ class SwipePlotExploreCanvas(app.Canvas):
             self.indices = gloo.IndexBuffer(np.roll(self.x_coords[:len(x)], len(x) - midpoint_index))
 
         vbo = gloo.VertexBuffer(x)
-        for i in range(len(y)):
-            self.programs[i]['is_scrolling'] = self.is_scrolling
-            self.programs[i]['pos_x'] = vbo
-            self.programs[i]['x_min'] = x[0]
-            self.programs[i]['pos_y'] = gloo.VertexBuffer(y[i][first_ts:])
+        index = 0
+        if self.update_visible_plots_in_timer:
+            self.update_visible_plots()
+            self.update_visible_plots_in_timer = False
+
+        for i in range(len(self.currently_visible_plots)):
+            if self.currently_visible_plots[i] == 1:
+                self.programs[i]['is_scrolling'] = self.is_scrolling
+                self.programs[i]['pos_x'] = vbo
+                self.programs[i]['x_min'] = x[0]
+                self.programs[i]['pos_y'] = gloo.VertexBuffer(y[i][first_ts:])
+                index += 1
 
         self.update_x_axis(x[0], x[-1])
 
@@ -715,7 +750,6 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.marker_program.bind(gloo.VertexBuffer(timestamp_buffer))
         self.marker_program['is_scrolling'] = self.is_scrolling
         self.marker_program['x_min'] = x[0]
-        #self.swipe_line_program['pos_x'] = np.array([x[-1]]).astype(np.float32)
         swipe_line_buffer = np.zeros(2, [('pos', np.float32, 2)])
         swipe_line_buffer['pos'] = [[x[-1], 1.0], [x[-1], -1.0]]
         self.swipe_line_program.bind(gloo.VertexBuffer(swipe_line_buffer))
@@ -822,6 +856,37 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.time_labels.text = time_text
         self.time_labels.pos = time_positions
 
+    def update_y_axis(self):
+        ticks_y_positions = []
+        num_plots = sum(self.currently_visible_plots)
+        offset = 1.0 / num_plots
+        for i in range(num_plots):
+            y = ((num_plots - i) - 0.5) * offset
+            ticks_y_positions.append([-self.half_tick_length, y])
+            ticks_y_positions.append([self.half_tick_length, y])
+        ticks_y = np.zeros(num_plots * 2, [('pos', np.float32, 2)])
+        ticks_y['pos'] = ticks_y_positions
+        self.y_ticks_program.bind(gloo.VertexBuffer(ticks_y))
+
+    def update_y_labels(self):
+        channel_labels_text = []
+        channel_labels_pos = []
+        y_range = 2.0 - 2.0 * self.vertical_padding - self.top_padding - self.bottom_padding
+        num_plots = sum(self.currently_visible_plots)
+        offset = 1.0 / num_plots
+        x = self.left_padding + self.horizontal_padding - 2 * self.half_tick_length - 1
+
+        iterator = 0
+        for i in range(len(self.currently_visible_plots)):
+            if self.currently_visible_plots[i] == 1:
+                channel_labels_text.append(f"ch{i+1}")
+                y = ((num_plots - iterator) - 0.5) * offset
+                y = y * y_range - 1.0 + self.bottom_padding + self.vertical_padding
+                channel_labels_pos.append((x, y))
+                iterator += 1
+        self.channel_labels.text = channel_labels_text
+        self.channel_labels.pos = channel_labels_pos
+
     def update_x_positions(self):
         time_positions = []
         y = self.bottom_padding + self.vertical_padding - 2 * self.half_tick_length - 1
@@ -840,6 +905,52 @@ class SwipePlotExploreCanvas(app.Canvas):
         available_x_range = 2 - 2*self.horizontal_padding - self.left_padding - self.right_padding
         x = x/length * available_x_range - 1 + self.left_padding + self.horizontal_padding
         return x
+
+    def update_programs(self):
+        iterator = 0
+        for i in range(len(self.currently_visible_plots)):
+            if self.currently_visible_plots[i] == 1:
+                self.programs[i]['plot_index'] = iterator
+                self.programs[i]['num_plots'] = sum(self.currently_visible_plots)
+
+                iterator += 1
+
+    def change_settings(self):
+        self.change_channel_mask()
+
+    def change_channel_mask(self):
+        '''
+        Sets the plot's channel mask and a flag telling the timer function to update plots
+        '''
+        self.channel_mask = self.explore_data_handler.get_channel_mask()
+        self.update_visible_plots_in_timer = True
+
+    def set_currently_visible_plots(self):
+        self.currently_visible_plots = [0 for _ in self.channel_mask]
+        iterator = 0
+        for i in range(len(self.channel_mask)):
+            if self.channel_mask[i] == 1:
+                if self.plot_offset <= iterator < (self.max_visible_plots + self.plot_offset):
+                    self.currently_visible_plots[i] = 1
+                iterator += 1
+
+        print(self.currently_visible_plots)
+
+    def set_max_visible_plots(self, new_max):
+        self.max_visible_plots = new_max
+        self.update_visible_plots_in_timer = True
+
+    def update_visible_plots(self):
+        self.set_currently_visible_plots()
+        if sum(self.currently_visible_plots) >= 1:
+            self.update_programs()
+            self.update_y_axis()
+            self.update_y_labels()
+
+    def set_plot_offset(self, new_offset):
+        self.plot_offset = max(min(new_offset, sum(self.channel_mask)-self.max_visible_plots), 0)
+        print(f"New plot offset: {self.plot_offset}")
+        self.update_visible_plots_in_timer = True
 
     def set_active(self, is_active):
         self.is_active = is_active
@@ -863,6 +974,10 @@ class EXGPlotVispy:
     def on_disconnected(self):
         self.explore_handler.on_disconnected()
         self.c.on_disconnected()
+
+    def change_settings(self):
+        self.explore_handler.change_settings()
+        self.c.change_settings()
 
     def change_scale(self, new_val):
         self.c.set_y_scale(Settings.SCALE_MENU_VISPY[new_val])

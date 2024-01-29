@@ -394,6 +394,7 @@ class MainWindow(QMainWindow, BaseModel):
 
         #self.signals.restartPlot.connect(self.exg_plot.init_plot)
         self.signals.restartPlot.connect(self.fft_plot.init_plot)
+        self.signals.restartPlot.connect(self.exg_plot_vispy.change_settings)
 
         #self.signals.mkrPlot.connect(self.mkr_plot.plot_marker)
         #self.signals.mkrAdd.connect(self.mkr_plot.model.add_mkr)
