@@ -432,7 +432,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         #  * potentially the index buffer
         # TODO: Make code more efficient and readable (i.e. reuse shader if possible)
         super(SwipePlotExploreCanvas, self).__init__(autoswap=False)
-        self.measure_fps()
+        #self.measure_fps()
         self.visible_channels = 8
 
         self.is_swipe_plot = True
@@ -449,6 +449,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.line_colour_highlighted = (0.8, 0.2, 0.2, 1.0)
         self.text_color = self.line_colour
         self.font_size = 6
+
+        self.vertical_marker_space = 8
 
         self.zoom_factor = 1
         self.max_visible_plots = 8
@@ -503,6 +505,7 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         self.channel_labels = None
         self.time_labels = None
+        self.marker_labels = None
 
         self.programs = []
 
@@ -535,8 +538,6 @@ class SwipePlotExploreCanvas(app.Canvas):
     def setup_programs_and_plots(self):
         self.num_plots = self.explore_data_handler.get_num_plots()
         self.channel_mask = self.explore_data_handler.get_channel_mask()
-        #self.zoom_factor = sum(self.channel_mask) / self.max_visible_plots
-        #self.set_currently_visible_plots()
 
         # ***** PROGRAM FOR MARKERS *****
         self.marker_program = gloo.Program()
@@ -571,6 +572,7 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         self.channel_labels = self.create_y_labels()
         self.time_labels = self.create_x_labels()
+        self.marker_labels = self.create_marker_labels()
 
         # ***** PROGRAMS FOR EXG PLOTTING *****
         for i in range(self.num_plots):
@@ -641,10 +643,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.axis_program.draw('lines')
         if self.y_ticks_program is not None:
             self.y_ticks_program.draw('lines')
-        #if not self.is_scrolling:
-        #    self.x_ticks_program.draw('lines')
         self.x_ticks_program.draw('lines')
-        #for i in range(self.num_plots):
         for i in range(len(self.currently_visible_plots)):
             if self.currently_visible_plots[i] == 0:
                 continue
@@ -662,6 +661,7 @@ class SwipePlotExploreCanvas(app.Canvas):
                 #  - then draw using an index buffer that reflects this or multiple draw calls with offsets
                 self.programs[i].draw('line_strip', self.indices)
         self.marker_program.draw('lines')
+        self.marker_labels.draw()
         if not self.is_scrolling and self.swipe_line_program is not None and self.is_swipe_plot:
             self.swipe_line_program.draw('lines')
         if self.channel_labels:
@@ -671,12 +671,13 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.swap_buffers()
 
     def on_key_press(self, event):
-        # TODO: decide what to do with this
+        # TODO: decide what to do with this / remove
         # switched off for now
-        #if event.key == keys.LEFT:
-        #    self.set_x_scale(x_scale=(self.duration + 5))
-        #elif event.key == keys.RIGHT:
-        #    self.set_x_scale(x_scale=(self.duration - 5))
+        return
+        if event.key == keys.LEFT:
+            self.set_x_scale(x_scale=(self.duration + 5))
+        elif event.key == keys.RIGHT:
+            self.set_x_scale(x_scale=(self.duration - 5))
         if event.key == keys.UP:
             #self.set_y_scale(y_scale=((self.y_range / 2) + 10))
             self.set_plot_offset(self.plot_offset-1)
@@ -737,7 +738,7 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         self.update_x_axis(x[0], x[-1])
 
-        _, timestamps_markers = self.explore_data_handler.get_markers()  # TODO: use the strings (placeholder _ currently)
+        marker_labels, timestamps_markers = self.explore_data_handler.get_markers()
         start_index, stop_index = np.searchsorted(timestamps_markers, [x[0], x[-1]])
         found_timestamps = timestamps_markers[start_index:stop_index]
         timestamp_coordinates = []
@@ -747,9 +748,11 @@ class SwipePlotExploreCanvas(app.Canvas):
         timestamp_buffer = np.zeros(len(timestamp_coordinates), [('pos', np.float32, 2)])
         if len(timestamp_coordinates) > 0:
             timestamp_buffer['pos'] = timestamp_coordinates
+        self.update_marker_labels(marker_labels[start_index:stop_index], found_timestamps, x[0], start_index=start_index)
         self.marker_program.bind(gloo.VertexBuffer(timestamp_buffer))
         self.marker_program['is_scrolling'] = self.is_scrolling
         self.marker_program['x_min'] = x[0]
+
         swipe_line_buffer = np.zeros(2, [('pos', np.float32, 2)])
         swipe_line_buffer['pos'] = [[x[-1], 1.0], [x[-1], -1.0]]
         self.swipe_line_program.bind(gloo.VertexBuffer(swipe_line_buffer))
@@ -831,6 +834,30 @@ class SwipePlotExploreCanvas(app.Canvas):
                                          font_size=self.font_size, anchor_y='bottom', anchor_x='right')
         time_labels.transforms = tr_sys
         return time_labels
+
+    def create_marker_labels(self):
+        tr_sys = visuals.transforms.TransformSystem()
+        tr_sys.configure(canvas=self)
+        marker_labels = visuals.TextVisual(color=self.text_color, font_size=self.font_size, anchor_y='bottom', anchor_x='left')
+        marker_labels.transforms = tr_sys
+        return marker_labels
+
+    def update_marker_labels(self, labels, pos_buffer, start, start_index=0):
+        marker_labels_pos = []
+        if len(labels) != len(pos_buffer):
+            raise ValueError(f"Number of marker labels doesn't equal number of positions:\n"
+                             f"#labels: {len(labels)}, #pos_buffer: {pos_buffer}")
+        if len(labels) == 0:
+            self.marker_labels.text = None
+        else:
+            y_range = 2 - 2 * self.vertical_padding - self.top_padding - self.bottom_padding - 0.1
+            y_top = 1 - self.vertical_padding - self.top_padding
+            for i in range(len(labels)):
+                pos_x = self.time_to_x_position(pos_buffer[i], start)
+                pos_y = y_top - (((start_index + i) % self.vertical_marker_space) / self.vertical_marker_space) * y_range - 0.1
+                marker_labels_pos.append((pos_x, pos_y))
+            self.marker_labels.text = labels
+            self.marker_labels.pos = marker_labels_pos
 
     def update_x_axis(self, start, stop):
         time_text = []
@@ -995,7 +1022,6 @@ class EXGPlotVispy:
         plot_count = sum(self.explore_handler.get_channel_mask())
         page_step = min(self.c.max_visible_plots, plot_count)
         maximum = max(0, plot_count-self.c.max_visible_plots)
-        print(f"plot_count: {plot_count}, page_step: {page_step}, maximum: {maximum}")
         self.vertical_scroll_bar.setPageStep(page_step)
         self.vertical_scroll_bar.setMaximum(maximum)
 
