@@ -3,6 +3,8 @@ import sys
 import numpy as np
 
 import explorepy
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QScrollBar
 from explorepy.stream_processor import TOPICS
 from explorepy.settings_manager import SettingsManager
 from vispy import app
@@ -958,6 +960,10 @@ class EXGPlotVispy:
         self.c = SwipePlotExploreCanvas(self.explore_handler, y_scale=Settings.DEFAULT_SCALE,
                                         x_scale=Settings.WIN_LENGTH)
         self.ui.horizontalLayout_21.addWidget(self.c.native)
+        self.vertical_scroll_bar = QScrollBar()
+        self.vertical_scroll_bar.setMinimum(0)
+        self.set_vertical_scrollbar()
+        self.ui.horizontalLayout_21.addWidget(self.vertical_scroll_bar)
 
     def set_active(self, is_active):
         self.c.set_active(is_active)
@@ -965,6 +971,7 @@ class EXGPlotVispy:
     def on_connected(self):
         self.explore_handler.on_connected()
         self.c.on_connected()
+        self.set_vertical_scrollbar()
 
     def on_disconnected(self):
         self.explore_handler.on_disconnected()
@@ -973,6 +980,7 @@ class EXGPlotVispy:
     def change_settings(self):
         self.explore_handler.change_settings()
         self.c.change_settings()
+        self.set_vertical_scrollbar()
 
     def change_scale(self, new_val):
         self.c.set_y_scale(Settings.SCALE_MENU_VISPY[new_val])
@@ -980,9 +988,21 @@ class EXGPlotVispy:
     def change_timescale(self, new_val):
         self.c.set_x_scale(int(Settings.TIME_RANGE_MENU[new_val]))
 
+    def set_plot_offset(self):
+        self.c.set_plot_offset(self.vertical_scroll_bar.value())
+
+    def set_vertical_scrollbar(self):
+        plot_count = sum(self.explore_handler.get_channel_mask())
+        page_step = min(self.c.max_visible_plots, plot_count)
+        maximum = max(0, plot_count-self.c.max_visible_plots)
+        print(f"plot_count: {plot_count}, page_step: {page_step}, maximum: {maximum}")
+        self.vertical_scroll_bar.setPageStep(page_step)
+        self.vertical_scroll_bar.setMaximum(maximum)
+
     def setup_ui_connections(self):
         self.ui.value_yAxis.currentTextChanged.connect(self.change_scale)
         self.ui.value_timeScale.currentTextChanged.connect(self.change_timescale)
+        self.vertical_scroll_bar.valueChanged.connect(self.set_plot_offset)
 
 
 if __name__ == '__main__':
