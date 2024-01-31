@@ -16,6 +16,12 @@ from exploredesktop.modules import Settings
 
 
 class CircularBufferPadded:
+    """Implements a circular buffer that is twice as long as its max allowed size. Data added to the buffer is
+    inserted in two locations (at last_index and last_index + max_length) and loops back around when the end of the
+    buffer (2 * max size) is reached. This ensures that the data inside the buffer is always available in one
+    contiguous block of memory, allowing numpy to access the entire buffer as a view without copying it. This allows
+    very fast (read) access to the data.
+    """
     def __init__(self, max_length, dtype=np.float32):
         self.max_length = max_length
         self.buffer = np.empty(self.max_length * 2, dtype=dtype)
@@ -24,6 +30,8 @@ class CircularBufferPadded:
         self.index_last = 0
 
     def view_end(self, length, offset=0):
+        """Views the last length entries in the buffer with an optional offset from the end.
+        """
         # Rollover for reading isn't possible, so this doesn't have to be taken into account
         if (length + offset) < self.length:
             return self.buffer[self.index_last - length - offset:self.index_last - offset]
@@ -33,7 +41,10 @@ class CircularBufferPadded:
             return self.buffer[self.index_first:self.index_last]
 
     def insert_iterating(self, chunk):
-        # TODO: Slicing the chunk correctly may be faster than enumerating but increases complexity
+        """Inserts new data given by chunk into the buffer. Data is inserted in two locations (from last_index and
+        last_index + max_size). The index of insertion loops back to the very start of the buffer at 2 * max_size.
+        """
+        # TODO: Slicing the chunk correctly may be faster than enumerating but increases complexity due
         for it, element in enumerate(chunk):
             loc = (self.index_last + it) % self.max_length
             self.buffer[loc] = element
@@ -68,9 +79,13 @@ class CircularBufferPadded:
 
 
 class ExploreDataHandlerCircularBuffer:
-    _valid_channels = [4, 8, 16, 32]
-
+    """Class that receives data from the Explore device and writes it to a padded circular buffer for fast read access.
+    """
     def __init__(self, dev_name, interface=None):
+        """Initialises an ExploreDataHandlerCircularBuffer object according to given Explore device name or Explore
+        interface. If no interface is passed through, the data handler establishes its own connection and creates an
+        Explore object (i.e. when testing outside of Explore Desktop).
+        """
         self.dev_name = dev_name
         self.interface = interface
         self.is_connected = False
@@ -81,7 +96,7 @@ class ExploreDataHandlerCircularBuffer:
             self.explore_device = explorepy.Explore()
             self.explore_device.connect(self.dev_name)
 
-        self.current_sr = 0
+        self.current_sr = 0  # TODO: current_sr needs to be adjusted when the sampling rate is changed from the settings
         self.max_channels = 0
         self.packet_length = 0
         self.max_length = 0
@@ -95,14 +110,13 @@ class ExploreDataHandlerCircularBuffer:
         self.settings = None
         self.channel_mask = []
         self.channels = {}
-        self.baselines = {}
 
+        # buffers
         self.timestamps = None
         self.markers = None
         self.timestamps_markers = None
 
         self.callbacks = {
-            # TOPICS.raw_ExG: [self.handle_exg],
             TOPICS.filtered_ExG: [self.handle_exg],
             TOPICS.raw_orn: [],
             TOPICS.marker: [self.handle_marker]
@@ -111,13 +125,13 @@ class ExploreDataHandlerCircularBuffer:
         if self.explore_device.is_connected:
             self.is_connected = True
             self.dev_name = self.explore_device.device_name
-            self.setup_buffers()
+            self.setup_internal_data()
             self.subscribe_packet_callbacks()
 
     def on_connected(self):
         self.is_connected = True
         self.dev_name = self.explore_device.device_name
-        self.setup_buffers()
+        self.setup_internal_data()
         self.subscribe_packet_callbacks()
 
     def on_disconnected(self):
@@ -128,7 +142,6 @@ class ExploreDataHandlerCircularBuffer:
 
     def clear_buffers(self):
         self.channels = {}
-        self.baselines = {}
 
         self.timestamps = None
         self.markers = None
@@ -140,7 +153,7 @@ class ExploreDataHandlerCircularBuffer:
         self.max_length = 0
         self.max_length_markers = 0
 
-    def setup_buffers(self):
+    def setup_internal_data(self):
         self.current_sr = int(self.explore_device.stream_processor.device_info['sampling_rate'])
         self.settings = SettingsManager(self.dev_name)
         self.max_channels = self.settings.get_channel_count()
@@ -152,15 +165,20 @@ class ExploreDataHandlerCircularBuffer:
         self.max_length = self.current_sr * self.max_duration
         self.max_length_markers = self.max_duration * 30  # 30 markers per second
 
+        self.setup_buffers()
+
+    def setup_buffers(self):
         for i in range(self.max_channels):
             self.channels[i] = CircularBufferPadded(self.max_length, dtype=np.float32)
-            self.baselines[i] = 0
 
         self.timestamps = CircularBufferPadded(self.max_length, dtype=np.float32)
         self.markers = CircularBufferPadded(self.max_length_markers, dtype='<U10')
         self.timestamps_markers = CircularBufferPadded(self.max_length_markers, dtype=np.float32)
 
     def change_settings(self):
+        self.change_channel_mask()
+
+    def change_channel_mask(self):
         self.channel_mask = self.settings.get_adc_mask()
         self.channel_mask.reverse()
 
@@ -171,18 +189,22 @@ class ExploreDataHandlerCircularBuffer:
         self.sub_unsub_packet_callbacks(sp_callback=self.explore_device.stream_processor.unsubscribe)
 
     def sub_unsub_packet_callbacks(self, sp_callback):
+        """Subscribes or unsubscribes the device's/interface's stream processor (given by sp_callback) to all internal
+        packet callbacks.
+        """
         for topic, callbacks in self.callbacks.items():
             for callback in callbacks:
                 sp_callback(callback=callback, topic=topic)
 
     def handle_exg(self, packet):
+        """Inserts incoming exg data and timestamps from a packet into internal buffers.
+        """
         timestamps, channels = packet.get_data(exg_fs=self.current_sr)
         if self.time_offset == 0:
             self.time_offset = timestamps[0]
 
         timestamps = timestamps - self.time_offset
         for i in range(len(channels)):
-            self.baselines[i] = self.baselines[i] * 0.8 + sum(channels[i]) / len(channels[i]) * 0.2
             self.channels[i].insert_iterating(channels[i])
         self.timestamps.insert_iterating(timestamps)
 
@@ -190,6 +212,8 @@ class ExploreDataHandlerCircularBuffer:
         raise NotImplementedError
 
     def handle_marker(self, packet):
+        """Inserts marker label and timestamp from a packet into internal buffers.
+        """
         timestamp, marker_string = packet.get_data()
         if self.time_offset == 0:
             self.time_offset = timestamp
@@ -200,19 +224,11 @@ class ExploreDataHandlerCircularBuffer:
             self.markers.insert_iterating(marker_string)
             self.timestamps_markers.insert_iterating(timestamp)
 
-    def get_channel_and_time(self, channel, duration, offset=0):
-        # TODO: write a version that gets *all* channels*
-        num_values = duration * self.current_sr
-        if offset == 0:
-            current_index = self.channels[channel].get_last_index() % num_values
-        else:
-            current_index = 0
-        return self.channels[channel].view_end(num_values, offset=offset), \
-               self.timestamps.view_end(num_values, offset=offset), \
-               self.baselines[channel], \
-               current_index
-
     def get_all_channels_and_time(self, duration, offset=0):
+        """Returns a list of numpy views of the last duration-many seconds (with a potential offset from the end) of the
+        internal ExG channel buffers and a numpy view of the timestamp. The amount of data returned is determined by
+        the given duration and the current sampling rate.
+        """
         num_values = duration * self.current_sr
         all_channels = [None for _ in range(len(self.channels))]
         if offset == 0:
@@ -221,8 +237,6 @@ class ExploreDataHandlerCircularBuffer:
             current_index = 0
 
         timestamps = self.timestamps.view_end(num_values, offset=offset)
-        #for i in range(len(self.channels)):
-        #    all_channels[i] = self.channels[i].view_end(num_values, offset=offset)
         for i in range(len(self.channel_mask)):
             if self.channel_mask[i] == 1:
                 all_channels[i] = self.channels[i].view_end(num_values, offset=offset)
@@ -247,6 +261,8 @@ class ExploreDataHandlerCircularBuffer:
         return self.channels[channel].get_distance(from_index)
 
     def get_markers(self):
+        """Returns a numpy view of all marker labels and marker timestamps.
+        """
         return self.markers.view_end(self.max_length_markers), self.timestamps_markers.view_end(self.max_length_markers)
 
     def get_current_sr(self):
@@ -259,18 +275,37 @@ class ExploreDataHandlerCircularBuffer:
         return self.channel_mask
 
 
+# *** VERTEX SHADERS ***
+
 vertex_default = """
-#version 120
+    /* Default vertex shader that sets x and y coordinate according to incoming 2D pos vector without transformations.
+    */
+    
+    #version 120
 
-attribute vec2 pos;
-
-void main() {
-    gl_Position = vec4(pos.x, pos.y, 0.0f, 1.0f);
-}
+    attribute vec2 pos;
+    
+    void main() {
+        gl_Position = vec4(pos.x, pos.y, 0.0f, 1.0f);
+    }
 """
 
 vertex_channel = """
+    /* Vertex shader used by the channels.
+    It determines y position according to...
+     - incoming voltage, current baseline and y_scale (pos_y, baseline, half of y_range)
+     - vertical paddings (vertical_padding, top_padding, bottom padding)
+     - plot index and maximum plots to draw (plot_index, num_plots)
+     
+     It determines x position according to...
+     - incoming timestamp, current duration and leftmost timestamp (pos_x, x_length, x_min)
+     - mode of drawing (is_scrolling, is_swipe_plot)
+     - horizontal paddings (horizontal_padding, left_padding, right_padding)
+    
+     It additionally takes a line colour and passes it to the fragment shader. */
+
     #version 120
+    
     uniform float vertical_padding;
     uniform float left_padding;
     uniform float right_padding;
@@ -335,37 +370,24 @@ vertex_channel = """
     }
 """
 
-fragment_explore_swipe = """
-    #version 120
-    varying vec4 v_col;
-
-    void main() {
-        gl_FragColor = v_col;
-    }
-    """
-
-frag_explore_marker = """
-#version 120
-
-void main()
-{
-    gl_FragColor = vec4(0.9, 0.0, 0.0, 1.0);
-}
-"""
-
 vertex_vertical_line = """
+    /* Vertex shader that is used by any program drawing vertical lines. It determines the x position of the line from
+    an incoming timestamp (pos.x) in the same way it is determined for channels in the vertex_channel VS.
+    The y coordinate (pos.y) is calculated outside the VS and only passed along.*/
+    
     #version 120
 
     uniform float x_length;
     uniform float horizontal_padding;
     uniform float left_padding;
     uniform float right_padding;
-    
+
     uniform float x_min;
-    
+
     uniform bool is_scrolling;
 
     attribute vec2 pos;
+    
     void main(void) {
         float x;
         if (!is_scrolling){
@@ -380,43 +402,75 @@ vertex_vertical_line = """
     }
 """
 
-fragment_explore_swipe_line = """
-#version 120
+vertex_padding = """
+    /* Vertex shader used for drawing the ticks on the y_axis. x and y coordinates are calculated outside of the VS
+    without padding (so for x in [-1;1] and y in [-1;1]), this VS only adds padding to the coordinates.*/
+    
+    #version 120
+    
+    attribute vec2 pos;
+    
+    uniform float vertical_padding;
+    uniform float horizontal_padding;
+    uniform float top_padding;
+    uniform float bottom_padding;
+    uniform float left_padding;
+    uniform float right_padding;
+    
+    void main(void) {
+        float available_y_range = 2.0 - 2.0*vertical_padding - top_padding - bottom_padding;
+        float available_x_range = 2.0 - 2.0*horizontal_padding - left_padding - right_padding;
+        float y = pos.y * available_y_range - 1.0 + bottom_padding + vertical_padding;
+        float x = pos.x * available_x_range - 1.0 + left_padding + horizontal_padding;
+        gl_Position = vec4(x, y, 0.0, 1.0);
+    }
+"""
 
-void main()
-{
-    gl_FragColor = vec4(0.3, 0.3, 0.4, 1.0);
-}
+# *** FRAGMENT SHADERS ***
+
+fragment_explore_swipe = """
+    /* Fragment shader that gets a colour from the VS and sets it as fragment colour. */
+    
+    #version 120
+    
+    varying vec4 v_col;
+
+    void main() {
+        gl_FragColor = v_col;
+    }
+    """
+
+frag_explore_marker = """
+    /* Fragment shader that sets the fragment colour to a bright red. */
+    
+    #version 120
+    
+    void main()
+    {
+        gl_FragColor = vec4(0.9, 0.0, 0.0, 1.0);
+    }
+"""
+
+fragment_explore_swipe_line = """
+    /* Fragment shader that sets the fragment colour to a blueish grey. */
+    
+    #version 120
+    
+    void main()
+    {
+        gl_FragColor = vec4(0.3, 0.3, 0.4, 1.0);
+    }
 """
 
 fragment_axes = """
-#version 120
-
-void main()
-{
-    gl_FragColor = vec4(0.4, 0.4, 0.5, 1.0);
-}
-"""
-
-vertex_padding = """
-#version 120
-
-attribute vec2 pos;
-
-uniform float vertical_padding;
-uniform float horizontal_padding;
-uniform float top_padding;
-uniform float bottom_padding;
-uniform float left_padding;
-uniform float right_padding;
-
-void main(void) {
-    float available_y_range = 2.0 - 2.0*vertical_padding - top_padding - bottom_padding;
-    float available_x_range = 2.0 - 2.0*horizontal_padding - left_padding - right_padding;
-    float y = pos.y * available_y_range - 1.0 + bottom_padding + vertical_padding;
-    float x = pos.x * available_x_range - 1.0 + left_padding + horizontal_padding;
-    gl_Position = vec4(x, y, 0.0, 1.0);
-}
+    /* Fragment shader that sets the fragment colour to a blueish grey. */
+    
+    #version 120
+    
+    void main()
+    {
+        gl_FragColor = vec4(0.4, 0.4, 0.5, 1.0);
+    }
 """
 
 
@@ -426,6 +480,10 @@ def s_to_time_string(time_s):
 
 
 class SwipePlotExploreCanvas(app.Canvas):
+    """ Class that handles drawing ExG channels to a vispy canvas. Data that doesn't change every draw call (i.e.
+    paddings, number of plots to draw, duration to visualise, scales etc.) is set at initialisation, data that changes
+    every draw call is retrieved and set in the on_timer function.
+    """
     def __init__(self, explore_data_handler, y_scale=100, x_scale=10):
         # TODO: Test circular buffer boundaries
         # TODO: Make sure datahandler returns...
