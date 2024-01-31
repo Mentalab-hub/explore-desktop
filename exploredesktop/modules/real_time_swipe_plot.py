@@ -22,6 +22,8 @@ class CircularBufferPadded:
     contiguous block of memory, allowing numpy to access the entire buffer as a view without copying it. This allows
     very fast (read) access to the data.
     """
+
+    # TODO: Test circular buffer boundaries
     def __init__(self, max_length, dtype=np.float32):
         self.max_length = max_length
         self.buffer = np.empty(self.max_length * 2, dtype=dtype)
@@ -485,18 +487,11 @@ class SwipePlotExploreCanvas(app.Canvas):
     every draw call is retrieved and set in the on_timer function.
     """
     def __init__(self, explore_data_handler, y_scale=100, x_scale=10):
-        # TODO: Test circular buffer boundaries
-        # TODO: Make sure datahandler returns...
-        #  * potentially the index buffer
-        # TODO: Make code more efficient and readable (i.e. reuse shader if possible)
         super(SwipePlotExploreCanvas, self).__init__(autoswap=False)
         #self.measure_fps()
-        self.visible_channels = 8
 
         self.is_swipe_plot = True
         self.is_active = False
-
-        self.ts_last_print = 0
 
         self.current_second = 0
 
@@ -508,33 +503,6 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.text_color = self.line_colour
         self.font_size = 6
 
-        self.vertical_marker_space = 8
-
-        self.zoom_factor = 1
-        self.max_visible_plots = 8
-        self.channel_mask = []
-        self.currently_visible_plots = []
-        # If channels are en- or disabled, the setting has to be synced between on_timer and on_draw, hence the flag
-        self.update_visible_plots_in_timer = False
-        self.plot_offset = 0
-
-        self.avg_refresh_time = 0
-        self.avg_refresh_time_iterator = 0
-
-        self.timer_iterator = 0
-
-        self.duration = x_scale  # in s
-        self.y_range = y_scale * 2  # range for y in uV
-        self.x_resolution = 1
-
-        self.scroll_activated_at = -1
-
-        self.min_time_window = 0.5
-        self.min_y_scale = 1
-
-        self.translate_back = 0
-        self.is_scrolling = False
-
         self.vertical_padding = 0.0
         self.top_padding = 0.0
         self.bottom_padding = 0.1
@@ -545,6 +513,27 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         self.half_tick_length = 0.01
 
+        self.vertical_marker_space = 8  # number of vertical slots for marker labels
+
+        self.max_visible_plots = 8  # maximum number of channels visible on the screen
+        self.channel_mask = []
+        self.currently_visible_plots = []
+        # If channels are en- or disabled, the setting has to be synced between on_timer and on_draw, hence the flag
+        self.update_visible_plots_in_timer = False
+        self.plot_offset = 0  # determines index of the top channel to draw
+
+        self.duration = x_scale  # in s
+        self.y_range = y_scale * 2  # range for y in uV
+        self.x_resolution = 1  # x tick resolution in s
+
+        self.min_time_window = 0.5
+        self.min_y_scale = 1
+
+        self.scroll_activated_at = -1
+        self.translate_back = 0
+        self.is_scrolling = False
+
+        # Program for drawing the y- and x-axis (without ticks or labels)
         self.axis_program = gloo.Program()
         self.axis_program.set_shaders(vert=vertex_padding, frag=fragment_axes)
         self.axis_program.bind(gloo.VertexBuffer(self.create_axes()))
@@ -556,11 +545,12 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.axis_program['right_padding'] = self.right_padding
         self.axis_program['bottom_padding'] = self.bottom_padding
 
+        # Program for drawing ticks on the x-axis
         self.x_ticks_program = gloo.Program()
         self.x_ticks_program.set_shaders(vert=vertex_default, frag=fragment_axes)
-
         self.x_ticks_program.bind(gloo.VertexBuffer(self.create_x_ticks()))
 
+        # Initialisation for variables and fields that are unknown until after connecting
         self.channel_labels = None
         self.time_labels = None
         self.marker_labels = None
@@ -571,13 +561,13 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.y_ticks_program = None
         self.marker_program = None
 
-        self.timer = app.Timer("auto", self.on_timer, start=False)
-
-        self.is_visible = False
-
         self.num_plots = 0
         self.x_coords = np.array(0, dtype=np.uint32)
         self.indices = self.x_coords
+
+        self.timer = app.Timer("auto", self.on_timer, start=False)
+
+        self.is_visible = False
 
         self.explore_data_handler = explore_data_handler
         if self.explore_data_handler.is_connected:
@@ -625,6 +615,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.y_ticks_program['top_padding'] = self.top_padding
         self.y_ticks_program['bottom_padding'] = self.bottom_padding
 
+        # Indices for the index buffer ([0, 1, ..., num_values])
         self.x_coords = np.arange(self.duration * self.explore_data_handler.current_sr).astype(np.uint32)
         self.indices = self.x_coords
 
@@ -664,37 +655,35 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.programs = []
 
     def set_y_scale(self, y_scale):
-        '''
-        Sets the y scale to be used for drawing the plots.
+        """Sets the y scale to be used for drawing the plots.
         :param y_scale: The new y scale in uV, the new plot range will be between -y_scale and +y_scale
-        '''
+        """
         if y_scale < self.min_y_scale:
             return
         self.y_range = 2 * y_scale
-        print(f"New y range is {self.y_range}")
         for i in range(self.num_plots):
             self.programs[i]['y_range'] = self.y_range
 
     def set_x_scale(self, x_scale):
-        '''
-        Sets the x scale (time axis) to be used for drawing the plots.
+        """Sets the x scale (time axis) to be used for drawing the plots.
         :param x_scale: The new time window in seconds to be visualised on screen.
-        '''
+        """
         if x_scale < self.min_time_window:
             return
         self.duration = x_scale
-        print(f"New x scale is {self.duration}")
         self.x_coords = np.arange(self.duration * self.explore_data_handler.current_sr).astype(np.uint32)
         for i in range(self.num_plots):
             self.programs[i]['x_length'] = self.duration
         self.marker_program['x_range'] = self.duration
         self.swipe_line_program['x_length'] = self.duration
-        self.update_x_positions()
+        #self.update_x_positions()
 
     def on_resize(self, event):
         gloo.set_viewport(0, 0, *event.size)
 
     def on_draw(self, event):
+        """Draws all available programs and visuals.
+        """
         gloo.clear(self.background_colour)
         if not self.is_visible or not self.is_active:
             return
@@ -722,29 +711,15 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.marker_labels.draw()
         if not self.is_scrolling and self.swipe_line_program is not None and self.is_swipe_plot:
             self.swipe_line_program.draw('lines')
-        if self.channel_labels:
+        if self.channel_labels is not None:
             self.channel_labels.draw()
-        if self.time_labels:
+        if self.time_labels is not None:
             self.time_labels.draw()
-        self.swap_buffers()
-
-    def on_key_press(self, event):
-        # TODO: decide what to do with this / remove
-        # switched off for now
-        return
-        if event.key == keys.LEFT:
-            self.set_x_scale(x_scale=(self.duration + 5))
-        elif event.key == keys.RIGHT:
-            self.set_x_scale(x_scale=(self.duration - 5))
-        if event.key == keys.UP:
-            #self.set_y_scale(y_scale=((self.y_range / 2) + 10))
-            self.set_plot_offset(self.plot_offset-1)
-        elif event.key == keys.DOWN:
-            #self.set_y_scale(y_scale=((self.y_range / 2) - 10))
-            self.set_plot_offset(self.plot_offset+1)
-        self.update()
+        self.swap_buffers()  # swaps the buffer we just drew every program/visual to with the current buffer
 
     def on_mouse_wheel(self, event):
+        """Handles scrolling back in time when the mouse wheel is activated on the canvas.
+        """
         channel = 0
         self.translate_back += int(event.delta[1] * 100)
         if self.scroll_activated_at >= 0:
@@ -753,39 +728,52 @@ class SwipePlotExploreCanvas(app.Canvas):
                                   self.explore_data_handler.get_length(
                                       channel) - self.duration * self.explore_data_handler.current_sr)
         self.translate_back = max(self.translate_back, 0)
+
         if self.translate_back == 0:
             self.scroll_activated_at = -1
         else:
             self.scroll_activated_at = self.explore_data_handler.get_last_index(channel)
 
     def on_timer(self, event):
+        """Handles all buffer and value updates for the next draw call and calls update on the canvas at the end.
+        """
         if not self.is_active:
             return
+
+        # Determine whether we are scrolling and how far away from the last ExG index we are
         additional_offset = 0
         if self.scroll_activated_at >= 0:
             additional_offset = self.explore_data_handler.get_distance(0, self.scroll_activated_at)
 
         self.is_scrolling = (additional_offset + self.translate_back) > 0
 
+        # Request the buffer views for all channels (y) and the timestamps (x) from the data handler
         y, x, current_index = \
             self.explore_data_handler.get_all_channels_and_time(self.duration,
                                                                 offset=self.translate_back + additional_offset)
 
+        # Determine the first actual timestamp for plotting according to the latest timestamp and cut off older values
         start_ts = x[-1] - self.duration
         first_ts = np.searchsorted(x, start_ts)  # assume the same ts index for all channels
         x = x[first_ts:]
 
+        # If we are drawing a swipe plot, determine the index of the current timestamp for rolling the index buffer
+        # accordingly
         if self.is_swipe_plot:
             midpoint_ts = (x[-1] // self.duration) * self.duration
             midpoint_index = np.searchsorted(x, midpoint_ts)
             self.indices = gloo.IndexBuffer(np.roll(self.x_coords[:len(x)], len(x) - midpoint_index))
 
+        # Create the vertex buffer for the timestamps
         vbo = gloo.VertexBuffer(x)
-        index = 0
+
+        # Update the plots if an update was requested from outside (i.e. changed settings to disable a channel etc.)
         if self.update_visible_plots_in_timer:
             self.update_visible_plots()
             self.update_visible_plots_in_timer = False
 
+        # Bind values that (might) have changed to the plot programs
+        index = 0
         for i in range(len(self.currently_visible_plots)):
             if self.currently_visible_plots[i] == 1:
                 self.programs[i]['is_scrolling'] = self.is_scrolling
@@ -796,6 +784,7 @@ class SwipePlotExploreCanvas(app.Canvas):
 
         self.update_x_axis(x[0], x[-1])
 
+        # Get marker data, slice it to only include the visible time range and create vertices accordingly
         marker_labels, timestamps_markers = self.explore_data_handler.get_markers()
         start_index, stop_index = np.searchsorted(timestamps_markers, [x[0], x[-1]])
         found_timestamps = timestamps_markers[start_index:stop_index]
@@ -806,11 +795,15 @@ class SwipePlotExploreCanvas(app.Canvas):
         timestamp_buffer = np.zeros(len(timestamp_coordinates), [('pos', np.float32, 2)])
         if len(timestamp_coordinates) > 0:
             timestamp_buffer['pos'] = timestamp_coordinates
-        self.update_marker_labels(marker_labels[start_index:stop_index], found_timestamps, x[0], start_index=start_index)
+        self.update_marker_labels(marker_labels[start_index:stop_index], found_timestamps, x[0],
+                                  start_index=start_index)
+
+        # Bind the marker coordinates and additionally needed info to the marker program
         self.marker_program.bind(gloo.VertexBuffer(timestamp_buffer))
         self.marker_program['is_scrolling'] = self.is_scrolling
         self.marker_program['x_min'] = x[0]
 
+        # Create and bind the swipe line coordinates to the swipe line buffer
         swipe_line_buffer = np.zeros(2, [('pos', np.float32, 2)])
         swipe_line_buffer['pos'] = [[x[-1], 1.0], [x[-1], -1.0]]
         self.swipe_line_program.bind(gloo.VertexBuffer(swipe_line_buffer))
@@ -834,6 +827,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         return axes
 
     def create_y_ticks(self):
+        """Returns coordinates for the y tick vertices according the number of plots to draw and length of the tick.
+        """
         ticks_y_positions = []
         offset = 1.0 / self.num_plots
         for i in range(self.num_plots):
@@ -845,6 +840,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         return ticks_y
 
     def create_x_ticks(self):
+        """Returns coordinates for the initial x tick vertices according to tick resolution, duration and tick length.
+        """
         ticks_x_positions = []
         for i in range(self.duration // self.x_resolution + 1):
             x = i * self.x_resolution / self.duration
@@ -855,6 +852,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         return ticks_x
 
     def create_y_labels(self):
+        """Returns the text visual holding channel labels for visible channels as well as their positions.
+        """
         channel_text = []
         channel_positions = []
         tr_sys = visuals.transforms.TransformSystem()
@@ -874,6 +873,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         return channel_labels
 
     def create_x_labels(self):
+        """Returns the text visual holding time labels for the ticks on the x-axis as well as their positions.
+        """
         start = (self.current_second // self.duration) * self.duration
         time_text = []
         time_positions = []
@@ -894,6 +895,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         return time_labels
 
     def create_marker_labels(self):
+        """Returns an (empty) text visual to be used for the marker labels
+        """
         tr_sys = visuals.transforms.TransformSystem()
         tr_sys.configure(canvas=self)
         marker_labels = visuals.TextVisual(color=self.text_color, font_size=self.font_size, anchor_y='bottom', anchor_x='left')
@@ -901,6 +904,9 @@ class SwipePlotExploreCanvas(app.Canvas):
         return marker_labels
 
     def update_marker_labels(self, labels, pos_buffer, start, start_index=0):
+        """Writes the marker labels for the currently visible markers as well as their positions to the marker_labels
+        text visual.
+        """
         marker_labels_pos = []
         if len(labels) != len(pos_buffer):
             raise ValueError(f"Number of marker labels doesn't equal number of positions:\n"
@@ -918,6 +924,9 @@ class SwipePlotExploreCanvas(app.Canvas):
             self.marker_labels.pos = marker_labels_pos
 
     def update_x_axis(self, start, stop):
+        """Binds new x-axis tick coordinates to the x_ticks_pogram according to first and last timestamp in the plot.
+        Additionally, the tick labels and their positions are written to the time_labels text visual.
+        """
         time_text = []
         time_positions = []
         tick_coordinates = []
@@ -942,6 +951,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.time_labels.pos = time_positions
 
     def update_y_axis(self):
+        """Binds the y-axis tick coordinates to y_ticks_program according to the number of visible plots and tick length.
+        """
         ticks_y_positions = []
         num_plots = sum(self.currently_visible_plots)
         offset = 1.0 / num_plots
@@ -954,6 +965,9 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.y_ticks_program.bind(gloo.VertexBuffer(ticks_y))
 
     def update_y_labels(self):
+        """Writes the labels for the currently visible channels as well as their positions to the channel_labels text
+        visual.
+        """
         channel_labels_text = []
         channel_labels_pos = []
         y_range = 2.0 - 2.0 * self.vertical_padding - self.top_padding - self.bottom_padding
@@ -972,16 +986,10 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.channel_labels.text = channel_labels_text
         self.channel_labels.pos = channel_labels_pos
 
-    def update_x_positions(self):
-        time_positions = []
-        y = self.bottom_padding + self.vertical_padding - 2 * self.half_tick_length - 1
-        x_range = 2 - 2 * self.horizontal_padding - self.left_padding - self.right_padding
-        for i in range(self.duration // self.x_resolution + 1):
-            x = (i * self.x_resolution / self.duration) * x_range - 1 + self.left_padding + self.horizontal_padding
-            time_positions.append((x, y))
-        self.time_labels.pos = time_positions
-
     def time_to_x_position(self, time, start):
+        """Calculates the x coordinate (in screen space) from a given time in seconds, the first timestamp in the plot
+        and the information whether the plot is currently in swipe mode.
+        """
         length = self.duration
         if not self.is_scrolling and self.is_swipe_plot:
             x = math.fmod(time, length)
@@ -1001,12 +1009,13 @@ class SwipePlotExploreCanvas(app.Canvas):
                 iterator += 1
 
     def change_settings(self):
+        """Method called from outside to inform the canvas of changes concerning the Explore device.
+        """
         self.change_channel_mask()
 
     def change_channel_mask(self):
-        '''
-        Sets the plot's channel mask and a flag telling the timer function to update plots
-        '''
+        """Sets the plot's channel mask and a flag telling the timer function to update plots.
+        """
         self.channel_mask = self.explore_data_handler.get_channel_mask()
         self.update_visible_plots_in_timer = True
 
@@ -1039,6 +1048,9 @@ class SwipePlotExploreCanvas(app.Canvas):
 
 
 class EXGPlotVispy:
+    """This class is a helper class to communicate signals and inputs from the Qt environment to the data handler
+    (ExploreDataHandlerCircularBuffer) and the vispy canvas (SwipePlotExploreCanvas).
+    """
     def __init__(self, ui, explore_interface) -> None:
         self.ui = ui
         self.explore_handler = ExploreDataHandlerCircularBuffer(dev_name=None, interface=explore_interface)
@@ -1051,6 +1063,10 @@ class EXGPlotVispy:
         self.ui.horizontalLayout_21.addWidget(self.vertical_scroll_bar)
 
     def set_active(self, is_active):
+        """This sets the canvas as inactive or active. The timer inside the function doesn't update any values or
+        buffers if it is inactive, which prevents unnecessary buffer binding and slow-downs when the canvas isn't
+        visible.
+        """
         self.c.set_active(is_active)
 
     def on_connected(self):
@@ -1074,9 +1090,13 @@ class EXGPlotVispy:
         self.c.set_x_scale(int(Settings.TIME_RANGE_MENU[new_val]))
 
     def set_plot_offset(self):
+        """Updates the plot offset with the current value of the scrollbar when it is activated.
+        """
         self.c.set_plot_offset(self.vertical_scroll_bar.value())
 
     def set_vertical_scrollbar(self):
+        """Sets maximum and bar size of the vertical scrollbar for the plots.
+        """
         plot_count = sum(self.explore_handler.get_channel_mask())
         page_step = min(self.c.max_visible_plots, plot_count)
         maximum = max(0, plot_count-self.c.max_visible_plots)
@@ -1087,13 +1107,3 @@ class EXGPlotVispy:
         self.ui.value_yAxis.currentTextChanged.connect(self.change_scale)
         self.ui.value_timeScale.currentTextChanged.connect(self.change_timescale)
         self.vertical_scroll_bar.valueChanged.connect(self.set_plot_offset)
-
-
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        device_name = sys.argv[1]
-    else:
-        device_name = "Explore_8539"
-    explore_handler = ExploreDataHandlerCircularBuffer(dev_name=device_name)
-    c = SwipePlotExploreCanvas(explore_data_handler=explore_handler)
-    app.run()
