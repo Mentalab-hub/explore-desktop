@@ -280,10 +280,10 @@ class ExploreDataHandlerCircularBuffer:
 # *** VERTEX SHADERS ***
 
 vertex_default = """
+    #version 120
+    
     /* Default vertex shader that sets x and y coordinate according to incoming 2D pos vector without transformations.
     */
-    
-    #version 120
 
     attribute vec2 pos;
     
@@ -293,6 +293,8 @@ vertex_default = """
 """
 
 vertex_channel = """
+    #version 120
+
     /* Vertex shader used by the channels.
     It determines y position according to...
      - incoming voltage, current baseline and y_scale (pos_y, baseline, half of y_range)
@@ -305,8 +307,6 @@ vertex_channel = """
      - horizontal paddings (horizontal_padding, left_padding, right_padding)
     
      It additionally takes a line colour and passes it to the fragment shader. */
-
-    #version 120
     
     uniform float vertical_padding;
     uniform float left_padding;
@@ -373,11 +373,11 @@ vertex_channel = """
 """
 
 vertex_vertical_line = """
+    #version 120
+
     /* Vertex shader that is used by any program drawing vertical lines. It determines the x position of the line from
     an incoming timestamp (pos.x) in the same way it is determined for channels in the vertex_channel VS.
     The y coordinate (pos.y) is calculated outside the VS and only passed along.*/
-    
-    #version 120
 
     uniform float x_length;
     uniform float horizontal_padding;
@@ -405,10 +405,10 @@ vertex_vertical_line = """
 """
 
 vertex_padding = """
+    #version 120
+
     /* Vertex shader used for drawing the ticks on the y_axis. x and y coordinates are calculated outside of the VS
     without padding (so for x in [-1;1] and y in [-1;1]), this VS only adds padding to the coordinates.*/
-    
-    #version 120
     
     attribute vec2 pos;
     
@@ -431,9 +431,9 @@ vertex_padding = """
 # *** FRAGMENT SHADERS ***
 
 fragment_explore_swipe = """
-    /* Fragment shader that gets a colour from the VS and sets it as fragment colour. */
-    
     #version 120
+
+    /* Fragment shader that gets a colour from the VS and sets it as fragment colour. */
     
     varying vec4 v_col;
 
@@ -443,9 +443,9 @@ fragment_explore_swipe = """
     """
 
 frag_explore_marker = """
-    /* Fragment shader that sets the fragment colour to a bright red. */
-    
     #version 120
+    
+    /* Fragment shader that sets the fragment colour to a bright red. */
     
     void main()
     {
@@ -454,9 +454,9 @@ frag_explore_marker = """
 """
 
 fragment_explore_swipe_line = """
-    /* Fragment shader that sets the fragment colour to a blueish grey. */
-    
     #version 120
+    
+    /* Fragment shader that sets the fragment colour to a blueish grey. */
     
     void main()
     {
@@ -465,9 +465,9 @@ fragment_explore_swipe_line = """
 """
 
 fragment_axes = """
-    /* Fragment shader that sets the fragment colour to a blueish grey. */
-    
     #version 120
+
+    /* Fragment shader that sets the fragment colour to a blueish grey. */
     
     void main()
     {
@@ -674,9 +674,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.x_coords = np.arange(self.duration * self.explore_data_handler.current_sr).astype(np.uint32)
         for i in range(self.num_plots):
             self.programs[i]['x_length'] = self.duration
-        self.marker_program['x_range'] = self.duration
+        self.marker_program['x_length'] = self.duration
         self.swipe_line_program['x_length'] = self.duration
-        #self.update_x_positions()
 
     def on_resize(self, event):
         gloo.set_viewport(0, 0, *event.size)
@@ -949,6 +948,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.x_ticks_program.bind(gloo.VertexBuffer(ticks_x))
         self.time_labels.text = time_text
         self.time_labels.pos = time_positions
+
 
     def update_y_axis(self):
         """Binds the y-axis tick coordinates to y_ticks_program according to the number of visible plots and tick length.
