@@ -1,16 +1,13 @@
 import math
-import sys
 import numpy as np
 
 import explorepy
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QScrollBar
 from explorepy.stream_processor import TOPICS
 from explorepy.settings_manager import SettingsManager
 from vispy import app
 from vispy import gloo
 from vispy import visuals
-from vispy.util import keys
 
 from exploredesktop.modules import Settings
 
@@ -117,6 +114,8 @@ class ExploreDataHandlerCircularBuffer:
         self.timestamps = None
         self.markers = None
         self.timestamps_markers = None
+        # variable to store bt stability status
+        self.stability_flags = None
 
         self.callbacks = {
             TOPICS.filtered_ExG: [self.handle_exg],
@@ -149,6 +148,8 @@ class ExploreDataHandlerCircularBuffer:
         self.markers = None
         self.timestamps_markers = None
 
+        self.stability_flags = None
+
         self.current_sr = 0
         self.max_channels = 0
         self.packet_length = 0
@@ -177,12 +178,15 @@ class ExploreDataHandlerCircularBuffer:
         self.markers = CircularBufferPadded(self.max_length_markers, dtype='<U10')
         self.timestamps_markers = CircularBufferPadded(self.max_length_markers, dtype=np.float32)
 
+        self.stability_flags = CircularBufferPadded(self.max_length_markers, dtype=np.float32)
+
     def change_settings(self):
         self.change_channel_mask()
 
     def change_channel_mask(self):
         self.channel_mask = self.settings.get_adc_mask()
         self.channel_mask.reverse()
+        self.current_sr = self.settings.get_sampling_rate()
 
     def subscribe_packet_callbacks(self):
         self.sub_unsub_packet_callbacks(sp_callback=self.explore_device.stream_processor.subscribe)
@@ -209,6 +213,9 @@ class ExploreDataHandlerCircularBuffer:
         for i in range(len(channels)):
             self.channels[i].insert_iterating(channels[i])
         self.timestamps.insert_iterating(timestamps)
+        # insert stability status values
+        timestamps_ = [self.explore_device.is_bt_link_unstable()] * len(channels[0])
+        self.stability_flags.insert_iterating(timestamps_)
 
     def handle_orn(self, packet):
         raise NotImplementedError
@@ -239,11 +246,12 @@ class ExploreDataHandlerCircularBuffer:
             current_index = 0
 
         timestamps = self.timestamps.view_end(num_values, offset=offset)
+        bt_status_flags = self.stability_flags.view_end(num_values, offset=offset)
         for i in range(len(self.channel_mask)):
             if self.channel_mask[i] == 1:
                 all_channels[i] = self.channels[i].view_end(num_values, offset=offset)
 
-        return all_channels, timestamps, current_index
+        return all_channels, timestamps, current_index, bt_status_flags
 
     def get_packet_length(self):
         return 4 if (self.max_channels == 32 or self.max_channels == 16) \
@@ -331,8 +339,10 @@ vertex_channel = """
     uniform float x_min;
 
     attribute float pos_x;
+    attribute float bt_status;
+    
     attribute float pos_y;
-
+    
     varying vec4 v_col;
 
     void main() {
@@ -356,18 +366,20 @@ vertex_channel = """
         float available_x_range = 2.0 - 2.0*horizontal_padding - left_padding - right_padding;
         x = (x / x_length) * available_x_range - 1.0 + left_padding + horizontal_padding;
         
-        v_col = line_colour;
+        //v_col = line_colour;
         //uncomment for rainbow lines!
         //float r = pow(x, 2.0);
         //float g = -3*pow(x+0.33, 2.0)+1;
         //float b = -3*pow(x-0.33, 2.0)+1;
         
-        float val = (2.0f * plot_index / num_plots) - 1.0f;
-        float r = pow(val, 2.0);
-        float g = -3*pow(val+0.33, 2.0)+1;
-        float b = -3*pow(val-0.33, 2.0)+1;
+    
+        //float val = (2.0f * plot_index / num_plots) - 1.0f;
+        float r =  255;
+        float g = 255 * (1 - bt_status);
+        float b = 255 * (1 - bt_status);
+    
+        v_col = vec4(vec3(r, g, b), 1.0);
         
-        v_col = vec4(vec3(r, g, b) * 0.5f + 0.3f * vec3(1.0f, 1.0f, 1.0f), 1.0);
         gl_Position = vec4(x, y, 0.0, 1.0);
     }
 """
@@ -489,6 +501,7 @@ class SwipePlotExploreCanvas(app.Canvas):
     def __init__(self, explore_data_handler, y_scale=100, x_scale=10):
         super(SwipePlotExploreCanvas, self).__init__(autoswap=False)
         #self.measure_fps()
+
 
         self.is_swipe_plot = True
         self.is_active = False
@@ -747,7 +760,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.is_scrolling = (additional_offset + self.translate_back) > 0
 
         # Request the buffer views for all channels (y) and the timestamps (x) from the data handler
-        y, x, current_index = \
+        y, x, current_index, bt_stability_flags = \
             self.explore_data_handler.get_all_channels_and_time(self.duration,
                                                                 offset=self.translate_back + additional_offset)
 
@@ -764,9 +777,13 @@ class SwipePlotExploreCanvas(app.Canvas):
             self.indices = gloo.IndexBuffer(np.roll(self.x_coords[:len(x)], len(x) - midpoint_index))
 
         # Create the vertex buffer for the timestamps
-        vbo = gloo.VertexBuffer(x)
-
         # Update the plots if an update was requested from outside (i.e. changed settings to disable a channel etc.)
+        # bind timestamps and status flags together
+        timestamps_with_bt_status = np.zeros(len(x), [('pos_x', np.float32, 1), ('bt_status', np.float32, 1)])
+        timestamps_with_bt_status['pos_x'] = x
+        timestamps_with_bt_status['bt_status'] = bt_stability_flags[first_ts:]
+        vbo = gloo.VertexBuffer(timestamps_with_bt_status)
+
         if self.update_visible_plots_in_timer:
             self.update_visible_plots()
             self.update_visible_plots_in_timer = False
@@ -776,7 +793,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         for i in range(len(self.currently_visible_plots)):
             if self.currently_visible_plots[i] == 1:
                 self.programs[i]['is_scrolling'] = self.is_scrolling
-                self.programs[i]['pos_x'] = vbo
+                self.programs[i].bind(vbo)
                 self.programs[i]['x_min'] = x[0]
                 self.programs[i]['pos_y'] = gloo.VertexBuffer(y[i][first_ts:])
                 index += 1
@@ -837,7 +854,6 @@ class SwipePlotExploreCanvas(app.Canvas):
         ticks_y = np.zeros(self.num_plots * 2, [('pos', np.float32, 2)])
         ticks_y['pos'] = ticks_y_positions
         return ticks_y
-
     def create_x_ticks(self):
         """Returns coordinates for the initial x tick vertices according to tick resolution, duration and tick length.
         """
@@ -968,7 +984,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         """Writes the labels for the currently visible channels as well as their positions to the channel_labels text
         visual.
         """
-        channel_labels_text = []
+        channel_labels_text = self.explore_data_handler.settings.get_channel_names()
+        #channel_labels_text = []
         channel_labels_pos = []
         y_range = 2.0 - 2.0 * self.vertical_padding - self.top_padding - self.bottom_padding
         num_plots = sum(self.currently_visible_plots)
@@ -978,7 +995,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         iterator = 0
         for i in range(len(self.currently_visible_plots)):
             if self.currently_visible_plots[i] == 1:
-                channel_labels_text.append(f"ch{i+1}")
+                #channel_labels_text.append(f"ch{i + 1}")
                 y = ((num_plots - iterator) - 0.5) * offset
                 y = y * y_range - 1.0 + self.bottom_padding + self.vertical_padding
                 channel_labels_pos.append((x, y))
@@ -1012,6 +1029,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         """Method called from outside to inform the canvas of changes concerning the Explore device.
         """
         self.change_channel_mask()
+        self.x_coords = np.arange(self.duration * self.explore_data_handler.current_sr).astype(np.uint32)
 
     def change_channel_mask(self):
         """Sets the plot's channel mask and a flag telling the timer function to update plots.
