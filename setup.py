@@ -13,8 +13,8 @@ requirements = ['PySide6==6.4.1',  # 6.5.2 breaks the footer module
                 'pyqtgraph==0.13.3',
                 'mne==1.5.0',
                 'explorepy',
-                'scipy==1.11.4',
-                'numpy==1.26.2',
+                'scipy==1.7.3',
+                'numpy==1.22.4',
                 'vispy',
                 'PyOpenGL'
                 ]
