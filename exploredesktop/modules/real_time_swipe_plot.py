@@ -374,9 +374,9 @@ vertex_channel = """
         
     
         //float val = (2.0f * plot_index / num_plots) - 1.0f;
-        float r =  255;
-        float g = 255 * (1 - bt_status);
-        float b = 255 * (1 - bt_status);
+        float r =  255 * bt_status;
+        float g = 200 * (1 - bt_status);
+        float b = 200 * (1 - bt_status);
     
         v_col = vec4(vec3(r, g, b), 1.0);
         
@@ -779,6 +779,10 @@ class SwipePlotExploreCanvas(app.Canvas):
         # Create the vertex buffer for the timestamps
         # Update the plots if an update was requested from outside (i.e. changed settings to disable a channel etc.)
         # bind timestamps and status flags together
+
+        # TODO update variable to fix future warning, ignored for now
+        import warnings
+        warnings.simplefilter("ignore", category=FutureWarning)
         timestamps_with_bt_status = np.zeros(len(x), [('pos_x', np.float32, 1), ('bt_status', np.float32, 1)])
         timestamps_with_bt_status['pos_x'] = x
         timestamps_with_bt_status['bt_status'] = bt_stability_flags[first_ts:]
