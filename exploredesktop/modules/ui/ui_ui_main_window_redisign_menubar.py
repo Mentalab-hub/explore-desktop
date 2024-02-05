@@ -24,9 +24,6 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
     QTableView, QVBoxLayout, QWidget)
 
 from pyqtgraph import (GraphicsLayoutWidget, PlotWidget)
-import app_resources_rc
-import app_resources_rc
-import app_resources_rc
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
