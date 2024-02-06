@@ -9,7 +9,7 @@ with open('README.md') as readme_file:
     readme = readme_file.read()
 
 requirements = ['PySide6==6.4.1',  # 6.5.2 breaks the footer module
-                'pandas==2.1.4',
+                'pandas',
                 'pyqtgraph==0.13.3',
                 'mne==1.5.0',
                 'explorepy',

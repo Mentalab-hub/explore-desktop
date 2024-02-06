@@ -42,7 +42,7 @@ elif sys.platform == "darwin":
     binaries = [(liblsl_dylib, 'pylsl/lib'),
                 (liblsl_dylib_major_minor, 'pylsl/lib')]
 elif sys.platform == "win32":
-    binaries = None
+    binaries = [(liblsl_path, 'pylsl/lib')]
 
 hidden_imports = [
     "vispy.ext._bundled.six",
@@ -67,9 +67,7 @@ a = Analysis([main_path],
 #a.datas += Tree(path.dirname(pylsl.__file__), prefix='pylsl', excludes='__pycache__')
 a.datas += Tree(path.dirname(mne.__file__), prefix='mne', excludes='__pycache__')
 a.datas += Tree(path.dirname(eeglabio.__file__), prefix='eeglabio', excludes='__pycache__')
-a.datas += Tree(os.path.dirname(vispy.glsl.__file__), os.path.join("vispy", "glsl"))
-a.datas += Tree(os.path.join(os.path.dirname(vispy.io.__file__), "_data"), os.path.join("vispy", "io", "_data"))
-a.datas += Tree(os.path.join(os.path.dirname(vispy.ext.__file__)), os.path.join("vispy", "ext"))
+a.datas += Tree(os.path.dirname(vispy.__file__), prefix='vispy', excludes='__pycache__')
 a.datas += Tree(os.path.dirname(freetype.__file__), os.path.join("freetype"))
 
 pyz = PYZ(a.pure, a.zipped_data,
