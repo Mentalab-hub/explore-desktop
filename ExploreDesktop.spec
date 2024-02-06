@@ -6,8 +6,12 @@ import pylsl
 import mne
 import eeglabio
 from distutils.sysconfig import get_python_lib
+from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_data_files
 import vispy.glsl
 import vispy.io
+import vispy.visuals
+import freetype
 
 import glob
 
@@ -42,8 +46,10 @@ elif sys.platform == "win32":
 
 hidden_imports = [
     "vispy.ext._bundled.six",
-    "vispy.app.backends._pyside6"
+    "vispy.app.backends._pyside6",
+    "freetpye"
 ]
+hidden_imports += collect_submodules('pandas._libs')
 
 a = Analysis([main_path],
              pathex=[get_python_lib()],
@@ -63,6 +69,8 @@ a.datas += Tree(path.dirname(mne.__file__), prefix='mne', excludes='__pycache__'
 a.datas += Tree(path.dirname(eeglabio.__file__), prefix='eeglabio', excludes='__pycache__')
 a.datas += Tree(os.path.dirname(vispy.glsl.__file__), os.path.join("vispy", "glsl"))
 a.datas += Tree(os.path.join(os.path.dirname(vispy.io.__file__), "_data"), os.path.join("vispy", "io", "_data"))
+a.datas += Tree(os.path.join(os.path.dirname(vispy.ext.__file__)), os.path.join("vispy", "ext"))
+a.datas += Tree(os.path.dirname(freetype.__file__), os.path.join("freetype"))
 
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
