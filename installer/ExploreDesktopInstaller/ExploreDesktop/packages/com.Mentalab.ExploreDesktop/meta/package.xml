@@ -2,7 +2,7 @@
 <Package>
     <DisplayName>ExploreDesktop</DisplayName>
     <Description>Install ExploreDesktop</Description>
-    <Version>0.7.1</Version>
+    <Version>0.7.2</Version>
     <ReleaseDate>2022-07-25</ReleaseDate>
     <Licenses>
         <License name="ExploreDesktop License" file="license.txt" />
