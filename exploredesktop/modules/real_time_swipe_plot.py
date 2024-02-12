@@ -988,8 +988,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         """Writes the labels for the currently visible channels as well as their positions to the channel_labels text
         visual.
         """
-        channel_labels_text = self.explore_data_handler.settings.get_channel_names()
-        #channel_labels_text = []
+        channel_labels_text_settings = self.explore_data_handler.settings.get_channel_names()
+        channel_labels_text = []
         channel_labels_pos = []
         y_range = 2.0 - 2.0 * self.vertical_padding - self.top_padding - self.bottom_padding
         num_plots = sum(self.currently_visible_plots)
@@ -999,7 +999,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         iterator = 0
         for i in range(len(self.currently_visible_plots)):
             if self.currently_visible_plots[i] == 1:
-                #channel_labels_text.append(f"ch{i + 1}")
+                channel_labels_text.append(channel_labels_text_settings[i])
                 y = ((num_plots - iterator) - 0.5) * offset
                 y = y * y_range - 1.0 + self.bottom_padding + self.vertical_padding
                 channel_labels_pos.append((x, y))
