@@ -113,8 +113,6 @@ class BTFrameView(BaseModel):
         else:
             device_name = ""
 
-
-
         return device_name
 
     def get_device_from_list(self) -> str:

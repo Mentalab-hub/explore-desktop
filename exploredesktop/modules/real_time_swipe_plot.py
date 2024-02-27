@@ -1,15 +1,16 @@
 import math
-import numpy as np
 
 import explorepy
-from PySide6.QtWidgets import QScrollBar
-from explorepy.stream_processor import TOPICS
-from explorepy.settings_manager import SettingsManager
-from vispy import app
-from vispy import gloo
-from vispy import visuals
-
+import numpy as np
 from exploredesktop.modules import Settings
+from explorepy.settings_manager import SettingsManager
+from explorepy.stream_processor import TOPICS
+from PySide6.QtWidgets import QScrollBar
+from vispy import (
+    app,
+    gloo,
+    visuals
+)
 
 
 class CircularBufferPadded:
@@ -289,12 +290,12 @@ class ExploreDataHandlerCircularBuffer:
 
 vertex_default = """
     #version 120
-    
+
     /* Default vertex shader that sets x and y coordinate according to incoming 2D pos vector without transformations.
     */
 
     attribute vec2 pos;
-    
+
     void main() {
         gl_Position = vec4(pos.x, pos.y, 0.0f, 1.0f);
     }
@@ -308,14 +309,14 @@ vertex_channel = """
      - incoming voltage, current baseline and y_scale (pos_y, baseline, half of y_range)
      - vertical paddings (vertical_padding, top_padding, bottom padding)
      - plot index and maximum plots to draw (plot_index, num_plots)
-     
+
      It determines x position according to...
      - incoming timestamp, current duration and leftmost timestamp (pos_x, x_length, x_min)
      - mode of drawing (is_scrolling, is_swipe_plot)
      - horizontal paddings (horizontal_padding, left_padding, right_padding)
-    
+
      It additionally takes a line colour and passes it to the fragment shader. */
-    
+
     uniform float vertical_padding;
     uniform float left_padding;
     uniform float right_padding;
@@ -340,22 +341,22 @@ vertex_channel = """
 
     attribute float pos_x;
     attribute float bt_status;
-    
+
     attribute float pos_y;
-    
+
     varying vec4 v_col;
 
     void main() {
         float available_y_range = (2.0 - 2.0*vertical_padding - top_padding - bottom_padding);
         float available_plot_range = available_y_range / num_plots;
         float offset = ((num_plots-plot_index)-0.5)*(1.0 / num_plots) * available_y_range;
-        
+
         float y = pos_y - baseline;
         y = y / (y_range / 2.0f); // all values in [-1;1], max_y = 1.0, min_y = -1.0
         y = y * available_plot_range * 0.5;
         y = y + offset - 1 + bottom_padding + vertical_padding;
-        
-        
+
+
         // calculate new x
         float x;
         if(!is_scrolling && is_swipe_plot) {
@@ -365,21 +366,21 @@ vertex_channel = """
         }
         float available_x_range = 2.0 - 2.0*horizontal_padding - left_padding - right_padding;
         x = (x / x_length) * available_x_range - 1.0 + left_padding + horizontal_padding;
-        
+
         //v_col = line_colour;
         //uncomment for rainbow lines!
         //float r = pow(x, 2.0);
         //float g = -3*pow(x+0.33, 2.0)+1;
         //float b = -3*pow(x-0.33, 2.0)+1;
-        
-    
+
+
         //float val = (2.0f * plot_index / num_plots) - 1.0f;
         float r =  255 * bt_status;
         float g = 200 * (1 - bt_status);
         float b = 200 * (1 - bt_status);
-    
+
         v_col = vec4(vec3(r, g, b), 1.0);
-        
+
         gl_Position = vec4(x, y, 0.0, 1.0);
     }
 """
@@ -401,7 +402,7 @@ vertex_vertical_line = """
     uniform bool is_scrolling;
 
     attribute vec2 pos;
-    
+
     void main(void) {
         float x;
         if (!is_scrolling){
@@ -421,16 +422,16 @@ vertex_padding = """
 
     /* Vertex shader used for drawing the ticks on the y_axis. x and y coordinates are calculated outside of the VS
     without padding (so for x in [-1;1] and y in [-1;1]), this VS only adds padding to the coordinates.*/
-    
+
     attribute vec2 pos;
-    
+
     uniform float vertical_padding;
     uniform float horizontal_padding;
     uniform float top_padding;
     uniform float bottom_padding;
     uniform float left_padding;
     uniform float right_padding;
-    
+
     void main(void) {
         float available_y_range = 2.0 - 2.0*vertical_padding - top_padding - bottom_padding;
         float available_x_range = 2.0 - 2.0*horizontal_padding - left_padding - right_padding;
@@ -446,7 +447,7 @@ fragment_explore_swipe = """
     #version 120
 
     /* Fragment shader that gets a colour from the VS and sets it as fragment colour. */
-    
+
     varying vec4 v_col;
 
     void main() {
@@ -456,9 +457,9 @@ fragment_explore_swipe = """
 
 frag_explore_marker = """
     #version 120
-    
+
     /* Fragment shader that sets the fragment colour to a bright red. */
-    
+
     void main()
     {
         gl_FragColor = vec4(0.9, 0.0, 0.0, 1.0);
@@ -467,9 +468,9 @@ frag_explore_marker = """
 
 fragment_explore_swipe_line = """
     #version 120
-    
+
     /* Fragment shader that sets the fragment colour to a blueish grey. */
-    
+
     void main()
     {
         gl_FragColor = vec4(0.3, 0.3, 0.4, 1.0);
@@ -480,7 +481,7 @@ fragment_axes = """
     #version 120
 
     /* Fragment shader that sets the fragment colour to a blueish grey. */
-    
+
     void main()
     {
         gl_FragColor = vec4(0.4, 0.4, 0.5, 1.0);
@@ -500,8 +501,7 @@ class SwipePlotExploreCanvas(app.Canvas):
     """
     def __init__(self, explore_data_handler, y_scale=100, x_scale=10):
         super(SwipePlotExploreCanvas, self).__init__(autoswap=False)
-        #self.measure_fps()
-
+        # self.measure_fps()
 
         self.is_swipe_plot = True
         self.is_active = False
@@ -858,6 +858,7 @@ class SwipePlotExploreCanvas(app.Canvas):
         ticks_y = np.zeros(self.num_plots * 2, [('pos', np.float32, 2)])
         ticks_y['pos'] = ticks_y_positions
         return ticks_y
+
     def create_x_ticks(self):
         """Returns coordinates for the initial x tick vertices according to tick resolution, duration and tick length.
         """
@@ -918,7 +919,8 @@ class SwipePlotExploreCanvas(app.Canvas):
         """
         tr_sys = visuals.transforms.TransformSystem()
         tr_sys.configure(canvas=self)
-        marker_labels = visuals.TextVisual(color=self.text_color, font_size=self.font_size, anchor_y='bottom', anchor_x='left')
+        marker_labels = visuals.TextVisual(color=self.text_color, font_size=self.font_size,
+                                           anchor_y='bottom', anchor_x='left')
         marker_labels.transforms = tr_sys
         return marker_labels
 
@@ -937,7 +939,8 @@ class SwipePlotExploreCanvas(app.Canvas):
             y_top = 1 - self.vertical_padding - self.top_padding
             for i in range(len(labels)):
                 pos_x = self.time_to_x_position(pos_buffer[i], start)
-                pos_y = y_top - (((start_index + i) % self.vertical_marker_space) / self.vertical_marker_space) * y_range - 0.1
+                pos_y = y_top - (((start_index + i) % self.vertical_marker_space)
+                                 / self.vertical_marker_space) * y_range - 0.1
                 marker_labels_pos.append((pos_x, pos_y))
             self.marker_labels.text = labels
             self.marker_labels.pos = marker_labels_pos
@@ -959,8 +962,8 @@ class SwipePlotExploreCanvas(app.Canvas):
             tick_x = self.time_to_x_position(current_tick, start)
             time_text.append(s_to_time_string(current_tick))
             time_positions.append((tick_x, y))
-            tick_coordinates.append([tick_x, y+self.half_tick_length])
-            tick_coordinates.append([tick_x, y+3*self.half_tick_length])
+            tick_coordinates.append([tick_x, y + self.half_tick_length])
+            tick_coordinates.append([tick_x, y + 3 * self.half_tick_length])
             current_tick += self.x_resolution
 
         ticks_x = np.zeros(len(tick_coordinates), [('pos', np.float32, 2)])
@@ -969,9 +972,9 @@ class SwipePlotExploreCanvas(app.Canvas):
         self.time_labels.text = time_text
         self.time_labels.pos = time_positions
 
-
     def update_y_axis(self):
-        """Binds the y-axis tick coordinates to y_ticks_program according to the number of visible plots and tick length.
+        """Binds the y-axis tick coordinates to y_ticks_program according to the
+        number of visible plots and tick length.
         """
         ticks_y_positions = []
         num_plots = sum(self.currently_visible_plots)
@@ -1016,8 +1019,8 @@ class SwipePlotExploreCanvas(app.Canvas):
             x = math.fmod(time, length)
         else:
             x = time - start
-        available_x_range = 2 - 2*self.horizontal_padding - self.left_padding - self.right_padding
-        x = x/length * available_x_range - 1 + self.left_padding + self.horizontal_padding
+        available_x_range = 2 - 2 * self.horizontal_padding - self.left_padding - self.right_padding
+        x = x / length * available_x_range - 1 + self.left_padding + self.horizontal_padding
         return x
 
     def update_programs(self):
@@ -1062,7 +1065,7 @@ class SwipePlotExploreCanvas(app.Canvas):
             self.update_y_labels()
 
     def set_plot_offset(self, new_offset):
-        self.plot_offset = max(min(new_offset, sum(self.channel_mask)-self.max_visible_plots), 0)
+        self.plot_offset = max(min(new_offset, sum(self.channel_mask) - self.max_visible_plots), 0)
         self.update_visible_plots_in_timer = True
 
     def set_active(self, is_active):
@@ -1121,7 +1124,7 @@ class EXGPlotVispy:
         """
         plot_count = sum(self.explore_handler.get_channel_mask())
         page_step = min(self.c.max_visible_plots, plot_count)
-        maximum = max(0, plot_count-self.c.max_visible_plots)
+        maximum = max(0, plot_count - self.c.max_visible_plots)
         self.vertical_scroll_bar.setPageStep(page_step)
         self.vertical_scroll_bar.setMaximum(maximum)
 

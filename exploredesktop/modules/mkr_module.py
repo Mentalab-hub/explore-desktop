@@ -137,7 +137,7 @@ class MarkerPlot(BasePlots):
         super().__init__(ui)
         self.model = MarkerData()
         self.plots_list = [
-            #self.ui.plot_exg,
+            # self.ui.plot_exg,
             self.ui.plot_orn.getItem(0, 0),
             self.ui.plot_orn.getItem(1, 0),
             self.ui.plot_orn.getItem(2, 0)
