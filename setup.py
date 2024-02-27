@@ -9,12 +9,14 @@ with open('README.md') as readme_file:
     readme = readme_file.read()
 
 requirements = ['PySide6==6.4.1',  # 6.5.2 breaks the footer module
-                'pandas==2.1.4',
+                'pandas',
                 'pyqtgraph==0.13.3',
                 'mne==1.5.0',
                 'explorepy',
                 'scipy==1.11.4',
-                'numpy==1.26.2'
+                'numpy==1.26.2',
+                'vispy',
+                'PyOpenGL'
                 ]
 
 test_requirements = ["pytest",
@@ -44,7 +46,7 @@ setup(
     test_suite='tests',
     extras_require=extras,
     url='https://github.com/Mentalab-hub/explore-desktop',
-    version='0.7.1',
+    version='0.7.2',
     zip_safe=False,
     entry_points={'console_scripts': ['exploredesktop = exploredesktop.main:main']},
 )

@@ -3,76 +3,27 @@
 ################################################################################
 ## Form generated from reading UI file 'ui_main_window_redisign_menubar.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.2
+## Created by: Qt User Interface Compiler version 6.4.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from exploredesktop import app_resources_rc
-from pyqtgraph import (
-    GraphicsLayoutWidget,
-    PlotWidget
-)
-from PySide6.QtCore import (
-    QCoreApplication,
-    QDate,
-    QDateTime,
-    QLocale,
-    QMetaObject,
-    QObject,
-    QPoint,
-    QRect,
-    QSize,
-    Qt,
-    QTime,
-    QUrl
-)
-from PySide6.QtGui import (
-    QAction,
-    QBrush,
-    QColor,
-    QConicalGradient,
-    QCursor,
-    QFont,
-    QFontDatabase,
-    QGradient,
-    QIcon,
-    QImage,
-    QKeySequence,
-    QLinearGradient,
-    QPainter,
-    QPalette,
-    QPixmap,
-    QRadialGradient,
-    QTransform
-)
-from PySide6.QtWidgets import (
-    QApplication,
-    QCheckBox,
-    QComboBox,
-    QFrame,
-    QGridLayout,
-    QHBoxLayout,
-    QHeaderView,
-    QLabel,
-    QLineEdit,
-    QListWidget,
-    QListWidgetItem,
-    QMainWindow,
-    QMenu,
-    QMenuBar,
-    QPushButton,
-    QScrollBar,
-    QSizePolicy,
-    QSpacerItem,
-    QSpinBox,
-    QStackedWidget,
-    QTableView,
-    QTabWidget,
-    QVBoxLayout,
-    QWidget
-)
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
+    QGridLayout, QHBoxLayout, QHeaderView, QLabel,
+    QLineEdit, QListWidget, QListWidgetItem, QMainWindow,
+    QMenu, QMenuBar, QPushButton, QSizePolicy,
+    QSpacerItem, QSpinBox, QStackedWidget, QTabWidget,
+    QTableView, QVBoxLayout, QWidget)
 
+from pyqtgraph import (GraphicsLayoutWidget, PlotWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -1034,17 +985,6 @@ class Ui_MainWindow(object):
         self.exg.setObjectName(u"exg")
         self.horizontalLayout_21 = QHBoxLayout(self.exg)
         self.horizontalLayout_21.setObjectName(u"horizontalLayout_21")
-        self.plot_exg = PlotWidget(self.exg)
-        self.plot_exg.setObjectName(u"plot_exg")
-
-        self.horizontalLayout_21.addWidget(self.plot_exg)
-
-        self.verticalScrollBar = QScrollBar(self.exg)
-        self.verticalScrollBar.setObjectName(u"verticalScrollBar")
-        self.verticalScrollBar.setOrientation(Qt.Vertical)
-
-        self.horizontalLayout_21.addWidget(self.verticalScrollBar)
-
         self.tabWidget.addTab(self.exg, "")
         self.orn = QWidget()
         self.orn.setObjectName(u"orn")
@@ -1472,7 +1412,7 @@ class Ui_MainWindow(object):
         self.btn_apply_settings_test.setGeometry(QRect(680, 270, 80, 24))
         self.layoutWidget = QWidget(self.page__testing)
         self.layoutWidget.setObjectName(u"layoutWidget")
-        self.layoutWidget.setGeometry(QRect(130, 150, 259, 34))
+        self.layoutWidget.setGeometry(QRect(130, 150, 260, 34))
         self.horizontalLayout_2 = QHBoxLayout(self.layoutWidget)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
@@ -1599,7 +1539,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menuBar = QMenuBar(MainWindow)
         self.menuBar.setObjectName(u"menuBar")
-        self.menuBar.setGeometry(QRect(0, 0, 1116, 21))
+        self.menuBar.setGeometry(QRect(0, 0, 1116, 25))
         self.menuFile = QMenu(self.menuBar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuImport = QMenu(self.menuFile)
@@ -1637,7 +1577,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.stackedWidget.setCurrentIndex(4)
+        self.stackedWidget.setCurrentIndex(3)
         self.tabWidget.setCurrentIndex(0)
 
 

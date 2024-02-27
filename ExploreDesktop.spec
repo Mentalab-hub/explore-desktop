@@ -6,6 +6,14 @@ import pylsl
 import mne
 import eeglabio
 from distutils.sysconfig import get_python_lib
+from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_data_files
+import vispy.glsl
+import vispy.io
+import vispy.visuals
+import freetype
+
+import glob
 
 global DISTPATH
 
@@ -20,22 +28,34 @@ else:
 
 block_cipher = None
 main_path = path.join('exploredesktop', 'main.py')
-liblsl_path = next(pylsl.pylsl.find_liblsl_libraries())
 
+liblsl_path = next(pylsl.pylsl.find_liblsl_libraries())
+liblsl_dir = os.path.dirname(liblsl_path)
+liblsl_v = pylsl.pylsl.library_version()
 
 if sys.platform == "linux" or sys.platform == "linux2":
     # TODO paths should not be hardcoded
     binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-2], 'pylsl/lib'), (liblsl_path[:-2]+'.1.16.0', 'pylsl/lib')]
 elif sys.platform == "darwin":
-    binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-5]+'1.15.2.dylib', 'pylsl/lib')]
+    liblsl_dylib = os.path.join(liblsl_dir, 'liblsl.dylib')
+    liblsl_dylib_major_minor = glob.glob(os.path.join(liblsl_dir, f'liblsl.{liblsl_v//100}.{liblsl_v%100}.*.dylib'))[0]
+    binaries = [(liblsl_dylib, 'pylsl/lib'),
+                (liblsl_dylib_major_minor, 'pylsl/lib')]
 elif sys.platform == "win32":
-    binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-7], 'pylsl/lib')]
+    binaries = [(liblsl_path, 'pylsl/lib')]
+
+hidden_imports = [
+    "vispy.ext._bundled.six",
+    "vispy.app.backends._pyside6",
+    "freetpye"
+]
+hidden_imports += collect_submodules('pandas._libs')
 
 a = Analysis([main_path],
              pathex=[get_python_lib()],
-             binaries=[],
+             binaries=binaries,
              datas=[],
-             hiddenimports=[],
+             hiddenimports=hidden_imports,
              hookspath=[],
              hooksconfig={},
              runtime_hooks=[],
@@ -47,6 +67,8 @@ a = Analysis([main_path],
 #a.datas += Tree(path.dirname(pylsl.__file__), prefix='pylsl', excludes='__pycache__')
 a.datas += Tree(path.dirname(mne.__file__), prefix='mne', excludes='__pycache__')
 a.datas += Tree(path.dirname(eeglabio.__file__), prefix='eeglabio', excludes='__pycache__')
+a.datas += Tree(os.path.dirname(vispy.__file__), prefix='vispy', excludes='__pycache__')
+a.datas += Tree(os.path.dirname(freetype.__file__), os.path.join("freetype"))
 
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
@@ -79,7 +101,7 @@ if sys.platform == 'darwin':
                  name=f'{exe_name}.app',
                  icon=icon_path,
                  bundle_identifier='com.mentalab.exploredesktop',
-                 version='0.7.1',
+                 version='0.7.2',
                  info_plist={
                   'NSPrincipalClass': 'NSApplication',
                   'NSAppleScriptEnabled': False,
