@@ -96,14 +96,9 @@ class ExploreInterface(Explore):
             logger.debug("Could not connect! %s", str(error))
             return False
 
-        # Find if the device is 4-ch or 8-ch
-        self.subscribe(topic=TOPICS.raw_ExG, callback=self._set_n_chan)
-        while self.device_chan is None:
-            time.sleep(.05)
-        self.unsubscribe(topic=TOPICS.raw_ExG, callback=self._set_n_chan)
-
         # Set channel mask and default chan names
         self.settings = SettingsManager(device_name)
+        self.device_chan = self.settings.get_channel_count()
         self.set_chan_mask()
         self.set_chan_dict_list()
         self.settings.settings_dict[self.settings.channel_name_key] = [
