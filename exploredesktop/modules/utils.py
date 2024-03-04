@@ -60,8 +60,10 @@ def display_msg(msg_text: str, title: str = None, popup_type: str = "error"):
         PySide6.QtWidgets.QMessageBox.StandardButton: button clicked
     """
     msg = QMessageBox()
+    msg.setObjectName('disp_box')
     msg.setText(msg_text)
-
+    msg.raise_()
+    msg.parent = QApplication.instance()
     if popup_type == "error":
         wdw_title = "Error" if title is None else title
         msg.setIcon(QMessageBox.Critical)
@@ -72,8 +74,8 @@ def display_msg(msg_text: str, title: str = None, popup_type: str = "error"):
         wdw_title = "Confirmation" if title is None else title
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         msg.setIcon(QMessageBox.Question)
-
     msg.setWindowTitle(wdw_title)
+
     response = msg.exec()
     return response
 
