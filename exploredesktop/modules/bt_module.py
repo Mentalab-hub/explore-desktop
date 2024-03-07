@@ -113,9 +113,6 @@ class BTFrameView(BaseModel):
         else:
             device_name = ""
 
-        if len(device_name) != 12:
-            device_name = ""
-
         return device_name
 
     def get_device_from_list(self) -> str:
@@ -159,9 +156,6 @@ class BTFrameView(BaseModel):
         """Connect to a explore device"""
         # Get device name
         device_name = self.get_dev_name()
-        if device_name == "":
-            display_msg(Messages.INVALID_EXPLORE_NAME)
-            return
 
         # Change footer and button
         self._connect_stylesheet(device_name=device_name)

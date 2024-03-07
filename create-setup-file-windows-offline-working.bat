@@ -26,7 +26,7 @@ call python -m pip install --upgrade pip
 @REM cd ..
 
 @REM Install Pyinstaller
-call pip install pyinstaller==4.7
+call pip install pyinstaller==6.3.0
 call pip install --upgrade pyinstaller-hooks-contrib==2023.2
 
 @REM Install ExploreDesktop
@@ -50,7 +50,7 @@ call rd /S /Q dist
 
 @REM Create executable files
 @REM call pyinstaller --onedir --console --noconfirm ExploreDesktop.spec
-call pyinstaller --onedir --console --noconfirm --distpath %exploredesktop_path_data% ExploreDesktop.spec
+call pyinstaller --distpath %exploredesktop_path_data% ExploreDesktop.spec
 
 @REM Copy files to data dir
 @REM call xcopy /I /E /H /R /Q dist\ExploreDesktop %exploredesktop_path%data\ExploreDesktop
