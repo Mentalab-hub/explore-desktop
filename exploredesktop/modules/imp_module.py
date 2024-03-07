@@ -14,6 +14,8 @@ from PySide6.QtWidgets import QMessageBox
 
 
 from exploredesktop.modules.app_settings import (  # isort: skip
+    ConnectionStatus,
+    EnvVariables,
     ImpModes,
     Messages,
     Settings,
@@ -122,6 +124,20 @@ class ImpedanceGraph(pg.GraphItem):
             self.setData(pos=pos, symbolBrush=brushes, text=texts)
         # increase packet counter
         self.packet += 1
+        self.handle_bt_drop()
+
+    def handle_bt_drop(self) -> None:
+        """Handle bluetooth drop
+
+        Args:
+            data (dict): exg data
+            sec_th (int): threshold of seconds to display the warning again. Defaults to 10
+        """
+        if self.model.explorer.is_bt_link_unstable():
+            self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: ConnectionStatus.UNSTABLE.value})
+        else:
+            connection_label = ConnectionStatus.CONNECTED.value.replace("dev_name", self.model.explorer.device_name)
+            self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: connection_label})
 
 
 class ImpModel(BaseModel):
