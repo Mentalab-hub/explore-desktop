@@ -14,7 +14,9 @@ requirements = ['PySide6==6.4.1',  # 6.5.2 breaks the footer module
                 'mne==1.5.0',
                 'explorepy',
                 'scipy==1.11.4',
-                'numpy==1.26.2'
+                'numpy==1.26.2',
+                'vispy',
+                'PyOpenGL'
                 ]
 
 test_requirements = ["pytest",

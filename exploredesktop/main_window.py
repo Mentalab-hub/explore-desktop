@@ -54,6 +54,7 @@ from exploredesktop.modules.lsl_module import IntegrationFrameView  # isort:skip
 from exploredesktop.modules.menubar_module import MenuBarActions   # isort:skip
 from exploredesktop.modules.mkr_module import MarkerPlot  # isort:skip
 from exploredesktop.modules.orn_module import ORNPlot  # isort:skip
+from exploredesktop.modules.real_time_swipe_plot import EXGPlotVispy
 from exploredesktop.modules.recording_module import RecordFunctions  # isort:skip
 from exploredesktop.modules.settings_module import SettingsFrameView  # isort:skip
 from exploredesktop.modules.utils import (  # isort:skip
@@ -141,8 +142,12 @@ class MainWindow(QMainWindow, BaseModel):
         # PLOTS
         self.orn_plot = ORNPlot(self.ui)
         self.orn_plot.setup_ui_connections()
-        self.exg_plot = ExGPlot(self.ui, self.filters)
-        self.exg_plot.setup_ui_connections()
+
+        #self.exg_plot = ExGPlot(self.ui, self.filters)
+
+        self.exg_plot_vispy = EXGPlotVispy(self.ui, self.explorer)
+        self.exg_plot_vispy.setup_ui_connections()
+        #self.exg_plot.setup_ui_connections()
         self.fft_plot = FFTPlot(self.ui)
         self.mkr_plot = MarkerPlot(self.ui)
         self.mkr_plot.setup_ui_connections()
@@ -169,7 +174,7 @@ class MainWindow(QMainWindow, BaseModel):
     def reset_vars(self) -> None:
         """Reset all variables"""
         self.is_streaming = False
-        self.exg_plot.reset_vars()
+        #self.exg_plot.reset_vars()
         self.orn_plot.reset_vars()
         # self.orn_plot.get_model().reset_vars()
         self.fft_plot.reset_vars()
@@ -215,9 +220,11 @@ class MainWindow(QMainWindow, BaseModel):
 
         if connection == ConnectionStatus.CONNECTED:
             btn_connect_text, btn_scan_enabled = self.on_connect()
+            self.exg_plot_vispy.on_connected()
 
         elif connection == ConnectionStatus.DISCONNECTED:
             btn_connect_text, btn_scan_enabled = self.on_disconnect()
+            self.exg_plot_vispy.on_disconnected()
 
         else:
             return
@@ -346,14 +353,15 @@ class MainWindow(QMainWindow, BaseModel):
         # actionScrollView.triggered.connect(lambda: self.exg_plot.model.change_vis_mode(VisModes.SCROLL))
         # actionScrollView.triggered.connect(self._init_plots)
 
-        self.ui.actionReceive_LSL_Markers.triggered.connect(self.mkr_plot.model.enable_external_markers)
+        #self.ui.actionReceive_LSL_Markers.triggered.connect(self.mkr_plot.model.enable_external_markers)
+
         # self.ui.actionReceive_LSL_Markers.setVisible(True)
         # self.ui.actionReceive_LSL_Markers.setChecked(False)
 
     def _init_plots(self) -> None:
         """Initialize plots"""
         self.orn_plot.init_plot()
-        self.exg_plot.init_plot()
+        #self.exg_plot.init_plot()
         self.fft_plot.init_plot()
 
     def setup_signal_connections(self):
@@ -374,37 +382,38 @@ class MainWindow(QMainWindow, BaseModel):
         self.signals.pageChange.connect(self.handle_page_navigation)
 
         self.signals.ornChanged.connect(self.orn_plot.swipe_plot)
-        self.signals.exgChanged.connect(self.exg_plot.swipe_plot)
+        #self.signals.exgChanged.connect(self.exg_plot.swipe_plot)
 
         self.signals.tRangeORNChanged.connect(self.orn_plot.set_t_range)
         self.signals.tAxisORNChanged.connect(self.orn_plot.set_t_axis)
 
-        self.signals.tRangeEXGChanged.connect(self.exg_plot.set_t_range)
-        self.signals.tAxisEXGChanged.connect(self.exg_plot.set_t_axis)
+        #self.signals.tRangeEXGChanged.connect(self.exg_plot.set_t_range)
+        #self.signals.tAxisEXGChanged.connect(self.exg_plot.set_t_axis)
 
-        self.signals.updateYAxis.connect(self.exg_plot.add_left_axis_ticks)
+        #self.signals.updateYAxis.connect(self.exg_plot.add_left_axis_ticks)
 
-        self.signals.restartPlot.connect(self.exg_plot.init_plot)
+        #self.signals.restartPlot.connect(self.exg_plot.init_plot)
         self.signals.restartPlot.connect(self.fft_plot.init_plot)
+        self.signals.restartPlot.connect(self.exg_plot_vispy.change_settings)
 
-        self.signals.mkrPlot.connect(self.mkr_plot.plot_marker)
-        self.signals.mkrAdd.connect(self.mkr_plot.model.add_mkr)
+        #self.signals.mkrPlot.connect(self.mkr_plot.plot_marker)
+        #self.signals.mkrAdd.connect(self.mkr_plot.model.add_mkr)
         # self.signals.mkrReplot.connect(lambda data: self.mkr_plot.plot_marker(data, replot=True))
-        self.signals.replotMkrAdd.connect(self.mkr_plot.model.add_mkr_replot)
-        self.signals.mkrRemove.connect(self.mkr_plot.remove_old_item)
+        #self.signals.replotMkrAdd.connect(self.mkr_plot.model.add_mkr_replot)
+        #self.signals.mkrRemove.connect(self.mkr_plot.remove_old_item)
 
-        self.signals.updateDataAttributes.connect(self.exg_plot.model.update_attributes)
+        #self.signals.updateDataAttributes.connect(self.exg_plot.model.update_attributes)
 
-        self.signals.btDrop.connect(self.exg_plot.display_bt_drop)
+        #self.signals.btDrop.connect(self.exg_plot.display_bt_drop)
 
-        self.signals.rrPeakRemove.connect(self.exg_plot.remove_old_r_peak)
+        #self.signals.rrPeakRemove.connect(self.exg_plot.remove_old_r_peak)
         # self.signals.rrPeakPlot.connect(self.exg_plot.plot_rr_point)
 
         # self.signals.heartRate.connect(self.ui.value_heartRate.setText)
-        self.signals.plotRR.connect(self.exg_plot.plot_rr_point)
+        #self.signals.plotRR.connect(self.exg_plot.plot_rr_point)
 
-        self.signals.recordStart.connect(self.exg_plot.model.set_packet_offset)
-        self.signals.recordEnd.connect(self.exg_plot.model.log_n_packets)
+        #self.signals.recordStart.connect(self.exg_plot.model.set_packet_offset)
+        #self.signals.recordEnd.connect(self.exg_plot.model.log_n_packets)
         self.signals.recordStart.connect(lambda: self.settings_frame.enable_settings(False))
         self.signals.recordEnd.connect(self.settings_frame.enable_settings)
 
@@ -504,6 +513,7 @@ class MainWindow(QMainWindow, BaseModel):
             bool: whether page has changed
         """
         # TODO: split this function
+        self.exg_plot_vispy.set_active(False)
         btn_page_map = {
             "btn_home": self.ui.page_home, "btn_bt": self.ui.page_bt,
             "btn_settings": self.ui.page_settings, "btn_plots": self.ui.page_plotsNoWidget,
@@ -538,6 +548,7 @@ class MainWindow(QMainWindow, BaseModel):
 
             filt = True
             self.ui.stackedWidget.setCurrentWidget(self.ui.page_plotsNoWidget)
+            self.exg_plot_vispy.set_active(True)
 
             if self.filters.current_filters is None:
                 filt = self.filters.popup_filters()
@@ -551,7 +562,7 @@ class MainWindow(QMainWindow, BaseModel):
             if not self.is_streaming and filt:
                 self._subscribe_callbacks()
                 self.is_streaming = True
-                self.mkr_plot.model.start_lsl_marker_thread()
+                #self.mkr_plot.model.start_lsl_marker_thread()
 
         # Move to page
         self.ui.stackedWidget.setCurrentWidget(btn_page_map[btn_name])
@@ -563,6 +574,9 @@ class MainWindow(QMainWindow, BaseModel):
         Args:
             idx (int): index of the active tab
         """
+        self.exg_plot_vispy.set_active(False)
+        if idx == 0:
+            self.exg_plot_vispy.set_active(True)
         if idx == 2:  # FFT tab active
             self.fft_plot.start_timer()
         else:
@@ -572,9 +586,9 @@ class MainWindow(QMainWindow, BaseModel):
         """Subscribe signal callbacks
         """
         self.explorer.subscribe(callback=self.orn_plot.model.callback, topic=TOPICS.raw_orn)
-        self.explorer.subscribe(callback=self.exg_plot.model.callback, topic=TOPICS.filtered_ExG)
+        #self.explorer.subscribe(callback=self.exg_plot.model.callback, topic=TOPICS.filtered_ExG)
         self.explorer.subscribe(callback=self.fft_plot.model.callback, topic=TOPICS.filtered_ExG)
-        self.explorer.subscribe(callback=self.mkr_plot.model.callback, topic=TOPICS.marker)
+        #self.explorer.subscribe(callback=self.mkr_plot.model.callback, topic=TOPICS.marker)
 
     def _move_to_settings(self) -> None:
         """Actions to perform before moving to settings
