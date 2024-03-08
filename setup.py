@@ -8,19 +8,19 @@ from setuptools import (
 with open('README.md') as readme_file:
     readme = readme_file.read()
 
-requirements = ['PySide6==6.2.1',
-                'pandas==1.3.4',
-                'pyqtgraph==0.12.3 ',
-                'mne==0.24.1',
+requirements = ['PySide6==6.4.1',  # 6.5.2 breaks the footer module
+                'pandas==2.1.4',
+                'pyqtgraph==0.13.3',
+                'mne==1.5.0',
                 'explorepy',
-                'scipy==1.10.0',
-                'numpy>= 1.22'
+                'scipy==1.11.4',
+                'numpy==1.26.2'
                 ]
 
-test_requirements = ["pytest==6.2.5",
-                     "flake8==4.0.1",
-                     "isort==5.10.1",
-                     "pytest-qt==4.0.2"]
+test_requirements = ["pytest",
+                     "flake8",
+                     "isort",
+                     "pytest-qt"]
 extras = {"test": test_requirements}
 
 setup(
@@ -44,7 +44,7 @@ setup(
     test_suite='tests',
     extras_require=extras,
     url='https://github.com/Mentalab-hub/explore-desktop',
-    version='0.7.1',
+    version='0.7.2',
     zip_safe=False,
     entry_points={'console_scripts': ['exploredesktop = exploredesktop.main:main']},
 )

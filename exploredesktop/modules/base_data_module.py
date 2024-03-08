@@ -130,8 +130,11 @@ class DataContainer(BaseModel):
             int: number of points
         """
         # IndexError might happen on disconnect, when some signals are terminated before others
-        n_new_points = len(data[list(data.keys())[0]])
-        return n_new_points
+        try:
+            n_new_points = len(data[list(data.keys())[0]])
+            return n_new_points
+        except IndexError as error:
+            logger.debug('Index error in base module for disconnection')
 
     def insert_new_data(self, data: dict, fft: bool = False, exg=None):
         """Insert new data into plot vectors

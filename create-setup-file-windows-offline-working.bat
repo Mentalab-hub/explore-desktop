@@ -39,7 +39,7 @@ call pip install scipy==1.7.3
 
 @REM Uncomment below if ExploreDesktop required the develop branch of explorepy
 call pip uninstall -y explorepy
-call pip install git+https://github.com/Mentalab-hub/explorepy.git@develop
+call pip install git+https://github.com/Mentalab-hub/explorepy.git@hotfix-unstable-imp
 
 @REM  Clean required directories
 call set exploredesktop_path="installer\ExploreDesktopInstaller\ExploreDesktop\packages\com.Mentalab.ExploreDesktop\"
@@ -61,4 +61,4 @@ call xcopy %exploredesktop_path%extras\MentalabLogo.ico %exploredesktop_path_dat
 @REM Create installer file
 call set config_path= "installer\ExploreDesktopInstaller\ExploreDesktop\config\config.xml"
 call set package_path="installer\ExploreDesktopInstaller\ExploreDesktop\packages"
-call C:\Qt\Tools\QtInstallerFramework\4.5\bin\binarycreator -c %config_path% -p %package_path% --verbose ExploreDesktopInstallerOffline.exe
+call C:\Qt\QtIFW-4.2.0\bin\binarycreator -c %config_path% -p %package_path% --verbose ExploreDesktopInstallerOffline.exe

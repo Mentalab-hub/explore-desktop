@@ -1,28 +1,42 @@
 # -*- mode: python ; coding: utf-8 -*-
 from os import path
+import shutil
 import sys
 import pylsl
 import mne
 import eeglabio
 from distutils.sysconfig import get_python_lib
 
+import glob
+
+global DISTPATH
+
+icon_base_path = path.join(".", "installer", "ExploreDesktopInstaller", "ExploreDesktop", "packages", "com.Mentalab.ExploreDesktop", "extras")
+
+exe_name = "ExploreDesktop"
+
 if sys.platform == "darwin":
-    icon_path = "./installer/ExploreDesktopInstaller/ExploreDesktop/packages/com.Mentalab.ExploreDesktop/extras/MentalabLogo.icns"
+    icon_path = path.join(icon_base_path, "MentalabLogo.icns")
 else:
-    icon_path = "./installer/ExploreDesktopInstaller/ExploreDesktop/packages/com.Mentalab.ExploreDesktop/extras/MentalabLogo.ico"
+    icon_path = path.join(icon_base_path, "MentalabLogo.ico")
 
 block_cipher = None
 main_path = path.join('exploredesktop', 'main.py')
-liblsl_path = next(pylsl.pylsl.find_liblsl_libraries())
 
+liblsl_path = next(pylsl.pylsl.find_liblsl_libraries())
+liblsl_dir = os.path.dirname(liblsl_path)
+liblsl_v = pylsl.pylsl.library_version()
 
 if sys.platform == "linux" or sys.platform == "linux2":
     # TODO paths should not be hardcoded
     binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-2], 'pylsl/lib'), (liblsl_path[:-2]+'.1.16.0', 'pylsl/lib')]
 elif sys.platform == "darwin":
-    pass
+    liblsl_dylib = os.path.join(liblsl_dir, 'liblsl.dylib')
+    liblsl_dylib_major_minor = glob.glob(os.path.join(liblsl_dir, f'liblsl.{liblsl_v//100}.{liblsl_v%100}.*.dylib'))[0]
+    binaries = [(liblsl_dylib, 'pylsl/lib'),
+                (liblsl_dylib_major_minor, 'pylsl/lib')]
 elif sys.platform == "win32":
-    binaries = [(liblsl_path, 'pylsl/lib'), (liblsl_path[:-7], 'pylsl/lib')]
+    binaries = None
 
 a = Analysis([main_path],
              pathex=[get_python_lib()],
@@ -37,7 +51,7 @@ a = Analysis([main_path],
              win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
-a.datas += Tree(path.dirname(pylsl.__file__), prefix='pylsl', excludes='__pycache__')
+#a.datas += Tree(path.dirname(pylsl.__file__), prefix='pylsl', excludes='__pycache__')
 a.datas += Tree(path.dirname(mne.__file__), prefix='mne', excludes='__pycache__')
 a.datas += Tree(path.dirname(eeglabio.__file__), prefix='eeglabio', excludes='__pycache__')
 
@@ -48,12 +62,12 @@ exe = EXE(pyz,
           a.scripts, 
           [],
           exclude_binaries=True,
-          name='ExploreDesktop',
+          name=exe_name,
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          console=False,
+          console=True,
           disable_windowed_traceback=False,
           target_arch=None,
           codesign_identity=None,
@@ -65,14 +79,14 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='ExploreDesktop')
+               name=exe_name)
 
 if sys.platform == 'darwin':
     app = BUNDLE(coll,
-                 name='ExploreDesktop.app',
+                 name=f'{exe_name}.app',
                  icon=icon_path,
                  bundle_identifier='com.mentalab.exploredesktop',
-                 version='0.7.1',
+                 version='0.7.2',
                  info_plist={
                   'NSPrincipalClass': 'NSApplication',
                   'NSAppleScriptEnabled': False,
@@ -80,3 +94,6 @@ if sys.platform == 'darwin':
                   'LSBackgroundOnly': False,
                   'NSBluetoothPeripheralUsageDescription': 'ExploreDesktop uses Bluetooth to communicate with the Explore devices.'
                  })
+
+target_location = path.join(DISTPATH, exe_name)
+shutil.copy(icon_path, target_location)

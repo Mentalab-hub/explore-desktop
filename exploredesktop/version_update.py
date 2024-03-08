@@ -25,6 +25,7 @@ def check_updates() -> Optional[str]:
         f"{maintenance_path} --checkupdates",
         shell=True, stdout=subprocess.PIPE)
     subprocess_return = process.stdout.read().decode("utf-8")
+    print('subprocess return is {}'.format(subprocess_return))
     logger.debug("Check updates output: %s" % subprocess_return)
     print(subprocess_return)
     if 'Warning' in subprocess_return:
