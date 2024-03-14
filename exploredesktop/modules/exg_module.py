@@ -1,10 +1,12 @@
 """ExG visualization module"""
 import logging
+import time
 
 import explorepy
 import numpy as np
 import pyqtgraph as pg
-from explorepy.tools import HeartRateEstimator
+from pylsl import local_clock
+from explorepy.tools import HeartRateEstimator, get_local_time
 from PySide6.QtCore import (
     QTimer,
     Slot
@@ -170,7 +172,7 @@ class ExGData(DataContainer):
         """
         if self.packet_count == 0 or self.explorer.device_name is None:
             return
-        if self.explorer.is_bt_link_unstable():
+        if self.explorer.is_bt_link_unstable() or (get_local_time() - self.explorer.stream_processor.last_exg_packet_timestamp) > 1.5:
             self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: ConnectionStatus.UNSTABLE.value})
         else:
             connection_label = ConnectionStatus.CONNECTED.value.replace("dev_name", self.explorer.device_name)

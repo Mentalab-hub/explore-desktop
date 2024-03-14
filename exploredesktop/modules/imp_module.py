@@ -9,9 +9,9 @@ from typing import Tuple
 import explorepy
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, QTimer
 from PySide6.QtWidgets import QMessageBox
-
+from explorepy.tools import get_local_time
 
 from exploredesktop.modules.app_settings import (  # isort: skip
     ConnectionStatus,
@@ -40,6 +40,12 @@ class ImpedanceGraph(pg.GraphItem):
         self.signals = self.model.get_signals()
         self.packet = 0
         self.start = time.time()
+
+        # start bt drop detection timer
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.handle_bt_drop)
+        self.timer.setInterval(300)
+        self.timer.start()
 
     def display_default_imp(self) -> None:
         """Initialize impedance graph
@@ -124,7 +130,6 @@ class ImpedanceGraph(pg.GraphItem):
             self.setData(pos=pos, symbolBrush=brushes, text=texts)
         # increase packet counter
         self.packet += 1
-        self.handle_bt_drop()
 
     def handle_bt_drop(self) -> None:
         """Handle bluetooth drop
@@ -133,7 +138,9 @@ class ImpedanceGraph(pg.GraphItem):
             data (dict): exg data
             sec_th (int): threshold of seconds to display the warning again. Defaults to 10
         """
-        if self.model.explorer.is_bt_link_unstable():
+        if self.packet == 0 or self.model.explorer.device_name is None:
+            return
+        if self.model.explorer.is_bt_link_unstable() or (get_local_time() - self.model.explorer.stream_processor.last_exg_packet_timestamp) > 1.5:
             self.signals.devInfoChanged.emit({EnvVariables.DEVICE_NAME: ConnectionStatus.UNSTABLE.value})
         else:
             connection_label = ConnectionStatus.CONNECTED.value.replace("dev_name", self.model.explorer.device_name)
