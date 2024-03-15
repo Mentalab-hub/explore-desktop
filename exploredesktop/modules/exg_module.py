@@ -71,7 +71,7 @@ class ExGData(DataContainer):
         # start bt drop detection timer
         self.timer = QTimer()
         self.timer.timeout.connect(self.handle_bt_drop)
-        self.timer.setInterval(1000)
+        self.timer.setInterval(300)
         self.timer.start()
 
     def reset_vars(self) -> None:
