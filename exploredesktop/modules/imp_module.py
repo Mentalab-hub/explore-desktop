@@ -44,7 +44,7 @@ class ImpedanceGraph(pg.GraphItem):
         # start bt drop detection timer
         self.timer = QTimer()
         self.timer.timeout.connect(self.handle_bt_drop)
-        self.timer.setInterval(300)
+        self.timer.setInterval(100)
         self.timer.start()
 
     def display_default_imp(self) -> None:
